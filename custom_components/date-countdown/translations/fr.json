@@ -2,10 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "description": "Configurer Date Countdown",
-        "data": {
-          "saint_of_the_day": "Afficher le saint du jour"
-        }
+        "description": "Initialisation de Date Countdown. Cliquez sur Soumettre pour continuer."
       },
       "add_event": {
         "description": "Ajouter un nouvel événement (date au format JJ/MM/AAAA)",
