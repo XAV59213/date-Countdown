@@ -1,7 +1,7 @@
 {
   "domain": "date_countdown",
   "name": "Date Countdown",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "documentation": "https://github.com/XAV59213/date_countdown",
   "requirements": [],
   "codeowners": ["@XAV59213"],
