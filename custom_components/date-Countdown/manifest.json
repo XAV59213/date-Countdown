@@ -1,0 +1,10 @@
+{
+  "domain": "date_countdown",
+  "name": "Date Countdown",
+  "version": "1.1.0",
+  "documentation": "https://github.com/your-repo/date_countdown",
+  "requirements": [],
+  "codeowners": [],
+  "iot_class": "local_polling",
+  "config_flow": true
+}
