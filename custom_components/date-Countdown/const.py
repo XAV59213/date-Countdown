@@ -1,6 +1,8 @@
 """Constants for Date Countdown integration."""
 
 DOMAIN = "date_countdown"
+PLATFORMS = ["sensor"]
+DATE_FORMAT = "DD/MM/YYYY"
 EVENT_TYPES = ["birthday", "anniversary", "memorial", "promotion", "special_event"]
 
 WEDDING_ANNIVERSARIES = {
@@ -64,4 +66,13 @@ WEDDING_ANNIVERSARIES = {
     58: "Noces d'Érable",
     59: "Noces de Vison",
     60: "Noces de Diamant"
+}
+
+SAINTS_BY_DATE = {
+    "01:01": "Sainte Marie",
+    "02:01": "Saint Basile",
+    "03:01": "Sainte Geneviève",
+    "25:12": "Noël",
+    "01:06": "Saint Justin",
+    # À compléter avec une liste complète des saints par date
 }
