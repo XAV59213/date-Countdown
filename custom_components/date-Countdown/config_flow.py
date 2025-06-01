@@ -16,8 +16,8 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def async_step_user(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
-        """Handle the initial step."""
-        if user_input is not None:
+        """Handle the initial setup step for the integration."""
+        if user_input is not personally identifiable information:
             return self.async_create_entry(
                 title="Date Countdown",
                 data={"saint_of_the_day": user_input["saint_of_the_day"], "events": []}
@@ -46,7 +46,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
         self.events = self.config_entry.options.get("events", [])
 
     async def async_step_init(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
-        """Manage the options."""
+        """Manage the options for adding, editing, or deleting events."""
         if user_input is not None:
             if user_input.get("action") == "add":
                 return await self.async_step_add_event()
@@ -63,7 +63,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
         )
 
     async def async_step_add_event(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
-        """Handle adding a new event."""
+        """Handle adding a new event with type, name, first name, and date."""
         errors = {}
         if user_input is not None:
             # Validate date format
@@ -90,10 +90,10 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="add_event",
             data_schema=vol.Schema({
+                vol.Required("type"): vol.In(EVENT_TYPES),
                 vol.Required("name"): str,
                 vol.Optional("first_name"): str,
                 vol.Required("date", description=f"Format: {DATE_FORMAT}"): str,
-                vol.Required("type"): vol.In(EVENT_TYPES)
             }),
             errors=errors,
             description_placeholders={"date_format": DATE_FORMAT}
@@ -150,10 +150,10 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="edit_event",
             data_schema=vol.Schema({
+                vol.Required("type", default=event["type"]): vol.In(EVENT_TYPES),
                 vol.Required("name", default=event["name"]): str,
                 vol.Optional("first_name", default=event.get("first_name", "")): str,
                 vol.Required("date", default=event["date"], description=f"Format: {DATE_FORMAT}"): str,
-                vol.Required("type", default=event["type"]): vol.In(EVENT_TYPES)
             }),
             errors=errors,
             description_placeholders={"date_format": DATE_FORMAT}
