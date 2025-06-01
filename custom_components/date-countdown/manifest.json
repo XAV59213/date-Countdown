@@ -3,7 +3,6 @@
   "name": "Date Countdown",
   "version": "1.1.0",
   "documentation": "https://github.com/XAV59213/date_countdown",
-  "issue_tracker": "https://github.com/XAV59213/date_countdown/issues",
   "requirements": [],
   "codeowners": ["@XAV59213"],
   "iot_class": "local_polling",
