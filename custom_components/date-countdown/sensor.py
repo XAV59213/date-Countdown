@@ -56,6 +56,7 @@ class DateCountdownSensor(SensorEntity):
         self._state = None
         self._years = None
         self._wedding_type = None
+        self._is_public_holiday = None
         self._attr_unique_id = f"{event_type}_{name.lower().replace(' ', '_')}_{event_date.replace('/', '')}"
         self._attr_name = self._get_friendly_name()
         self._attr_unit_of_measurement = "days"
@@ -68,19 +69,18 @@ class DateCountdownSensor(SensorEntity):
         }.get(event_type, "mdi:calendar")
 
     def _get_friendly_name(self) -> str:
-        """Return the friendly name based on event type."""
+        """Return the friendly name in the format 'Name - Event Type'."""
         prefix = f"{self._first_name} {self._name}".strip() if self._first_name else self._name
-        if self._event_type == "birthday":
-            return f"{prefix}'s birthday"
-        elif self._event_type == "anniversary":
-            return f"{prefix}'s anniversary"
-        elif self._event_type == "memorial":
-            return f"In memory of {prefix}"
-        elif self._event_type == "promotion":
-            return f"{prefix}'s promotion"
-        elif self._event_type == "special_event":
-            return f"{prefix}'s special event"
-        return f"{prefix}'s {self._event_type}"
+        # Define translated event types
+        event_type_labels = {
+            "birthday": "Anniversaire",
+            "anniversary": "Anniversaire de mariage",
+            "memorial": "Mémorial",
+            "promotion": "Promotion",
+            "special_event": "Événement spécial"
+        }
+        event_type_name = event_type_labels.get(self._event_type, self._event_type)
+        return f"{prefix} - {event_type_name}"
 
     @property
     def state(self) -> Optional[int]:
@@ -94,7 +94,8 @@ class DateCountdownSensor(SensorEntity):
             "years": self._years,
             "friendly_name": self._attr_name,
             "event_type": self._event_type,
-            "first_name": self._first_name
+            "first_name": self._first_name,
+            "is_public_holiday": self._is_public_holiday
         }
         if self._event_type == "anniversary" and self._wedding_type:
             attributes["wedding_type"] = self._wedding_type
@@ -110,6 +111,7 @@ class DateCountdownSensor(SensorEntity):
             self._state = None
             self._years = None
             self._wedding_type = None
+            self._is_public_holiday = None
             return
 
         today = dt_util.now().date()
@@ -130,6 +132,10 @@ class DateCountdownSensor(SensorEntity):
             self._wedding_type = WEDDING_ANNIVERSARIES[self._years]
         else:
             self._wedding_type = None
+
+        # Check if the event date is a public holiday
+        date_key = f"{day:02d}:{month:02d}"
+        self._is_public_holiday = PUBLIC_HOLIDAYS_2025.get(date_key)
 
 class SaintOfTheDaySensor(SensorEntity):
     """Representation of a Saint of the Day sensor."""
