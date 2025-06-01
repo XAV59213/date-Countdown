@@ -6,7 +6,10 @@ from homeassistant.core import HomeAssistant
 from .const import DOMAIN, PLATFORMS
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Set up the Date Countdown component."""
+    """Set up the Date Countdown component.
+
+    This integration uses config flow, so no setup is required here.
+    """
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -22,4 +25,7 @@ async def async_update_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        hass.data[DOMAIN].pop(entry.entry_id, None)
+        return True
+    return False
