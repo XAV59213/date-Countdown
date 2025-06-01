@@ -1,5 +1,9 @@
-```python
-"""Config flow for Date Countdown integration."""
+"""Config flow for Date Countdown integration.
+
+This module handles the configuration flow for the Date Countdown integration,
+allowing users to set up the integration and manage events (add, edit, delete)
+through the Home Assistant UI.
+"""
 
 import logging
 from typing import Any, Dict, Optional
@@ -110,7 +114,11 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
 
         # Define translated labels for event types
         event_type_options = {
-            event_type: event_type.capitalize() for event_type in EVENT_TYPES
+            "birthday": "Anniversaire",
+            "anniversary": "Anniversaire de mariage",
+            "memorial": "Mémorial",
+            "promotion": "Promotion",
+            "special_event": "Événement spécial"
         }
 
         return self.async_show_form(
@@ -203,7 +211,11 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
         event = self.events[event_index]
         # Define translated labels for event types
         event_type_options = {
-            event_type: event_type.capitalize() for event_type in EVENT_TYPES
+            "birthday": "Anniversaire",
+            "anniversary": "Anniversaire de mariage",
+            "memorial": "Mémorial",
+            "promotion": "Promotion",
+            "special_event": "Événement spécial"
         }
         return self.async_show_form(
             step_id="edit_event",
@@ -216,4 +228,3 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
             errors=errors,
             description_placeholders={"date_format": DATE_FORMAT}
         )
-```
