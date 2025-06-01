@@ -64,5 +64,12 @@
         }
       }
     }
+  },
+  "state_attributes": {
+    "sensor": {
+      "is_public_holiday": {
+        "name": "Jour férié"
+      }
+    }
   }
 }
