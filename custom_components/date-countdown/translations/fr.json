@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "description": "Initialisation de Date Countdown. Cliquez sur Soumettre pour continuer."
+        "description": "Configurez votre premier événement pour Date Countdown (date au format JJ/MM/AAAA)."
       },
       "add_event": {
         "description": "Ajouter un nouvel événement (date au format JJ/MM/AAAA)",
