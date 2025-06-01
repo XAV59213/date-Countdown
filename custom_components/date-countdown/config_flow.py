@@ -51,8 +51,12 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         _LOGGER.debug("Starting async_step_user with user_input: %s", user_input)
         errors = {}
         if user_input is not None:
+            # Validate name
+            if not user_input["name"].strip():
+                errors["name"] = "invalid_name"
+                _LOGGER.warning("Invalid name: name cannot be empty")
             # Validate date format
-            if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
+            elif not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
                 errors["date"] = "invalid_date_format"
                 _LOGGER.warning("Invalid date format: %s", user_input["date"])
             else:
@@ -103,7 +107,7 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:
-        """Get the options flow for this handler."""
+        """Return the options flow handler for this config entry."""
         _LOGGER.debug("Initializing options flow for config_entry: %s", config_entry.entry_id)
         return DateCountdownOptionsFlow(config_entry)
 
@@ -168,8 +172,12 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
         _LOGGER.debug("async_step_add_event called with user_input: %s", user_input)
         errors = {}
         if user_input is not None:
+            # Validate name
+            if not user_input["name"].strip():
+                errors["name"] = "invalid_name"
+                _LOGGER.warning("Invalid name: name cannot be empty")
             # Validate date format
-            if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
+            elif not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
                 errors["date"] = "invalid_date_format"
                 _LOGGER.warning("Invalid date format: %s", user_input["date"])
             else:
@@ -197,11 +205,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                     # Force reload of the entry to ensure sensors are updated
                     await self.hass.config_entries.async_reload(self.config_entry.entry_id)
                     _LOGGER.info("Reloaded config entry %s after adding event", self.config_entry.entry_id)
-                    return self.async_create_entry(
-                        title=_generate_entry_title(self.events),
-                        data={},
-                        options={"events": self.events}
-                    )
+                    return self.async_abort(reason="event_added")
 
         # Define translated labels for event types
         event_type_options = {
@@ -267,11 +271,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                 # Force reload of the entry to ensure sensors are updated
                 await self.hass.config_entries.async_reload(self.config_entry.entry_id)
                 _LOGGER.info("Reloaded config entry %s after deleting event", self.config_entry.entry_id)
-                return self.async_create_entry(
-                    title=_generate_entry_title(self.events),
-                    data={},
-                    options={"events": self.events}
-                )
+                return self.async_abort(reason="event_deleted")
 
         event_options = {str(i): f"{e['name']} ({e['type']})" for i, e in enumerate(self.events)}
         return self.async_show_form(
@@ -288,7 +288,12 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
         errors = {}
         event_index = user_input.get("event_index", 0)
         if user_input is not None and "name" in user_input:
-            if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
+            # Validate name
+            if not user_input["name"].strip():
+                errors["name"] = "invalid_name"
+                _LOGGER.warning("Invalid name: name cannot be empty")
+            # Validate date format
+            elif not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
                 errors["date"] = "invalid_date_format"
                 _LOGGER.warning("Invalid date format for edit: %s", user_input["date"])
             else:
@@ -316,11 +321,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                     # Force reload of the entry to ensure sensors are updated
                     await self.hass.config_entries.async_reload(self.config_entry.entry_id)
                     _LOGGER.info("Reloaded config entry %s after editing event", self.config_entry.entry_id)
-                    return self.async_create_entry(
-                        title=_generate_entry_title(self.events),
-                        data={},
-                        options={"events": self.events}
-                    )
+                    return self.async_abort(reason="event_updated")
 
         event = self.events[event_index]
         # Define translated labels for event types
