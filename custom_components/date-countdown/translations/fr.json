@@ -1,0 +1,21 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Configuration initiale de Date Countdown. Types d'événements disponibles : {event_types}",
+        "data": {
+          "saint_of_the_day": "Activer l'affichage du saint du jour"
+        }
+      },
+      "add_event": {
+        "description": "Ajouter un nouvel événement (date au format {date_format})",
+        "data": {
+          "type": "Type d'événement",
+          "name": "Nom",
+          "first_name": "Prénom (optionnel)",
+          "date": "Date ({date_format})"
+        }
+      }
+    }
+  }
+}
