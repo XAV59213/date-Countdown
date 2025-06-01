@@ -157,4 +157,4 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
             }),
             errors=errors,
             description_placeholders={"date_format": DATE_FORMAT}
-        )...
+        )
