@@ -11,7 +11,7 @@ from homeassistant.util import dt as dt_util
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceRegistry, async_get as async_get_device_registry
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry, RegistryEntry
 
-from .const import DOMAIN, EVENT_TYPES, WEDDING_ANNIVERSARIES, SAINTS_BY_DATE, PUBLIC_HOLIDAYS_2025
+from .const import DOMAIN, EVENT_TYPES, WEDDING_ANNIVERSARIES, SAINTS_BY_DATE, PUBLIC_HOLIDAYS_2025, SAINT_OF_THE_DAY_ID, PUBLIC_HOLIDAY_ID
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,21 +27,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     device_registry: DeviceRegistry = async_get_device_registry(hass)
     entity_registry = async_get_entity_registry(hass)
 
+    # Create a device for this config entry
+    event_device = device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, f"event_device_{entry.entry_id}")},
+        name=f"Événements - {entry.title}",
+        manufacturer="xAI",
+        model="Date Countdown",
+        entry_type=DeviceEntryType.SERVICE,
+    )
+
     # Add event sensors (these can be re-created as events change)
     for event in entry.options.get("events", []):
         event_sensor = DateCountdownSensor(
             event["name"],
             event.get("first_name", ""),
             event["type"],
-            event["date"]
+            event["date"],
+            device_id=event_device.id
         )
         sensors.append(event_sensor)
-        _LOGGER.info("Created DateCountdownSensor with unique_id: %s, name: %s", event_sensor.unique_id, event_sensor.name)
+        _LOGGER.info("Created DateCountdownSensor with unique_id: %s, name: %s, device_id: %s", event_sensor.unique_id, event_sensor.name, event_device.id)
 
     # Create global static sensors (SaintOfTheDaySensor and PublicHolidaySensor) only if they don't exist
     # Check if SaintOfTheDaySensor already exists
     saint_entity: Optional[RegistryEntry] = entity_registry.async_get_entity_id(
-        "sensor", DOMAIN, "global_saint_of_the_day"
+        "sensor", DOMAIN, SAINT_OF_THE_DAY_ID
     )
     if saint_entity is None:
         # Create a device for SaintOfTheDaySensor
@@ -57,11 +68,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         sensors.append(saint_sensor)
         _LOGGER.info("Created global SaintOfTheDaySensor with unique_id: %s, device_id: %s", saint_sensor.unique_id, saint_device.id)
     else:
-        _LOGGER.debug("SaintOfTheDaySensor with unique_id global_saint_of_the_day already exists")
+        _LOGGER.debug("SaintOfTheDaySensor with unique_id %s already exists", SAINT_OF_THE_DAY_ID)
 
     # Check if PublicHolidaySensor already exists
     holiday_entity: Optional[RegistryEntry] = entity_registry.async_get_entity_id(
-        "sensor", DOMAIN, "global_public_holiday"
+        "sensor", DOMAIN, PUBLIC_HOLIDAY_ID
     )
     if holiday_entity is None:
         # Create a device for PublicHolidaySensor
@@ -77,7 +88,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         sensors.append(holiday_sensor)
         _LOGGER.info("Created global PublicHolidaySensor with unique_id: %s, device_id: %s", holiday_sensor.unique_id, holiday_device.id)
     else:
-        _LOGGER.debug("PublicHolidaySensor with unique_id global_public_holiday already exists")
+        _LOGGER.debug("PublicHolidaySensor with unique_id %s already exists", PUBLIC_HOLIDAY_ID)
 
     hass.data[DOMAIN][entry.entry_id] = {"sensors": sensors}
     async_add_entities(sensors)
@@ -90,7 +101,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class DateCountdownSensor(SensorEntity):
     """Representation of a Date Countdown sensor."""
 
-    def __init__(self, name: str, first_name: str, event_type: str, event_date: str) -> None:
+    def __init__(self, name: str, first_name: str, event_type: str, event_date: str, device_id: str) -> None:
         """Initialize the sensor."""
         self._name = name
         self._first_name = first_name
@@ -110,6 +121,7 @@ class DateCountdownSensor(SensorEntity):
             "promotion": "mdi:briefcase",
             "special_event": "mdi:star"
         }.get(event_type, "mdi:calendar")
+        self._attr_device_id = device_id
 
     def _get_friendly_name(self) -> str:
         """Return the friendly name in the format 'Name - Event Type'."""
@@ -189,7 +201,7 @@ class SaintOfTheDaySensor(SensorEntity):
         """Initialize the sensor."""
         self._state = None
         self._saint = None
-        self._attr_unique_id = "global_saint_of_the_day"
+        self._attr_unique_id = SAINT_OF_THE_DAY_ID
         self._attr_name = "Saint du jour"
         self._attr_icon = "mdi:church"
         self._attr_device_id = device_id
@@ -223,7 +235,7 @@ class PublicHolidaySensor(SensorEntity):
         self._state = None
         self._next_holiday = None
         self._next_date = None
-        self._attr_unique_id = "global_public_holiday"
+        self._attr_unique_id = PUBLIC_HOLIDAY_ID
         self._attr_name = "Jour férié"
         self._attr_icon = "mdi:calendar-star"
         self._attr_device_id = device_id
