@@ -436,3 +436,18 @@ SAINTS_BY_DATE = {
     "30:12": "les Roger",
     "31:12": "les Sylvestre"
 }
+
+# Dictionary mapping dates (DD:MM) to public holidays in France for 2025
+PUBLIC_HOLIDAYS_2025 = {
+    "01:01": "Jour de l’An",
+    "21:04": "Lundi de Pâques",
+    "01:05": "Fête du Travail",
+    "08:05": "Victoire 1945",
+    "29:05": "Ascension",
+    "09:06": "Lundi de Pentecôte",
+    "14:07": "Fête Nationale",
+    "15:08": "Assomption",
+    "01:11": "Toussaint",
+    "11:11": "Armistice 1918",
+    "25:12": "Noël"
+}
