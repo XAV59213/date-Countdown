@@ -54,11 +54,16 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         _LOGGER.debug("Initializing DateCountdownOptionsFlow")
-        self.events = self.config_entry.options.get("events", [])
+        self.events = None  # Initialize events later in async_step_init
 
     async def async_step_init(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
         """Manage the options."""
         _LOGGER.debug("async_step_init called with user_input: %s", user_input)
+        # Initialize events from config_entry.options
+        if self.events is None:
+            self.events = self.config_entry.options.get("events", [])
+            _LOGGER.debug("Initialized events: %s", self.events)
+
         if user_input is not None:
             action = user_input.get("action")
             if action not in ["add", "edit", "delete"]:
