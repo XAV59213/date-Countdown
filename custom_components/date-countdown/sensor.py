@@ -49,7 +49,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, "saint_of_the_day_device")},
             name="Saint du Jour",
-            manufacturer="xAI",
+            manufacturer="@XAV59213",
             model="Date Countdown",
             entry_type=DeviceEntryType.SERVICE,
         )
@@ -69,7 +69,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, "public_holiday_device")},
             name="Jour Férié",
-            manufacturer="xAI",
+            manufacturer="@XAV59213",
             model="Date Countdown",
             entry_type=DeviceEntryType.SERVICE,
         )
