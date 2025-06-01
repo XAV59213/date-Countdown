@@ -1,5 +1,4 @@
 """Sensor platform for Date Countdown."""
-
 import logging
 from datetime import date
 from typing import Any, Dict, Optional
@@ -28,7 +27,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     entity_registry = async_get_entity_registry(hass)
 
     # Add event sensors (these can be re-created as events change)
-    for event in entry.options.get("events", []):
+    events = entry.options.get("events", [])
+    if not events:
+        _LOGGER.warning("No events configured for Date Countdown integration. No event sensors will be created.")
+    for event in events:
+        # Validate event data
+        if not all(key in event for key in ["name", "date", "type"]):
+            _LOGGER.error("Invalid event configuration, missing required fields: %s", event)
+            continue
+        if event["type"] not in EVENT_TYPES:
+            _LOGGER.error("Invalid event type '%s' for event: %s", event["type"], event)
+            continue
+
+        try:
+            # Validate date format (DD/MM/YYYY)
+            day, month, year = map(int, event["date"].split('/'))
+            date(year, month, day)  # This will raise ValueError if the date is invalid
+        except (ValueError, TypeError) as e:
+            _LOGGER.error("Invalid date format for event %s: %s. Expected DD/MM/YYYY.", event, e)
+            continue
+
         event_sensor = DateCountdownSensor(
             event["name"],
             event.get("first_name", ""),
@@ -79,8 +97,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     else:
         _LOGGER.debug("PublicHolidaySensor with unique_id global_public_holiday already exists")
 
-    hass.data[DOMAIN][entry.entry_id] = {"sensors": sensors}
-    async_add_entities(sensors)
+    if not sensors:
+        _LOGGER.warning("No sensors were created for Date Countdown integration. Check configuration and events.")
+    else:
+        hass.data[DOMAIN][entry.entry_id] = {"sensors": sensors}
+        async_add_entities(sensors)
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
@@ -110,6 +131,7 @@ class DateCountdownSensor(SensorEntity):
             "promotion": "mdi:briefcase",
             "special_event": "mdi:star"
         }.get(event_type, "mdi:calendar")
+        _LOGGER.debug("Initialized DateCountdownSensor: unique_id=%s, name=%s, date=%s", self._attr_unique_id, self._attr_name, self._event_date)
 
     def _get_friendly_name(self) -> str:
         """Return the friendly name in the format 'Name - Event Type'."""
@@ -135,15 +157,21 @@ class DateCountdownSensor(SensorEntity):
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
         """Return the state attributes."""
+        # Always include event_date, even if async_update fails
         attributes = {
-            "years": self._years,
-            "friendly_name": self._attr_name,
+            "event_date": self._event_date,  # Ensure event_date is always present
             "event_type": self._event_type,
             "first_name": self._first_name,
-            "is_public_holiday": self._is_public_holiday
+            "friendly_name": self._attr_name
         }
-        if self._event_type == "anniversary" and self._wedding_type:
+        # Add computed attributes if they are available
+        if self._years is not None:
+            attributes["years"] = self._years
+        if self._is_public_holiday is not None:
+            attributes["is_public_holiday"] = self._is_public_holiday
+        if self._event_type == "anniversary" and self._wedding_type is not None:
             attributes["wedding_type"] = self._wedding_type
+        _LOGGER.debug("Returning attributes for sensor %s: %s", self._attr_unique_id, attributes)
         return attributes
 
     async def async_update(self) -> None:
@@ -152,7 +180,8 @@ class DateCountdownSensor(SensorEntity):
             # Parse and validate date
             day, month, year = map(int, self._event_date.split('/'))
             date(year, month, day)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError) as e:
+            _LOGGER.error("Failed to parse event date %s for sensor %s: %s", self._event_date, self._attr_unique_id, e)
             self._state = None
             self._years = None
             self._wedding_type = None
@@ -168,6 +197,7 @@ class DateCountdownSensor(SensorEntity):
 
         # Calculate days until event
         self._state = (next_event - today).days
+        _LOGGER.debug("Updated sensor %s: %s days until %s", self._attr_unique_id, self._state, next_event)
 
         # Calculate years
         self._years = next_event.year - year
