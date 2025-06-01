@@ -2,7 +2,7 @@
 
 This module handles the configuration flow for the Date Countdown integration,
 allowing users to manage events (add, edit, delete) through the Home Assistant UI.
-The 'Saint du jour' sensor is enabled by default and not configurable.
+The 'Saint du jour' and 'Jour férié' sensors are enabled by default and not configurable.
 """
 
 import logging
@@ -18,6 +18,29 @@ from .const import DOMAIN, EVENT_TYPES, DATE_FORMAT
 
 _LOGGER = logging.getLogger(__name__)
 
+def _generate_entry_title(events: list) -> str:
+    """Generate a title for the config entry based on the list of events."""
+    if not events:
+        return "Compte à rebours d'événements (vide)"
+    # Define translated event types
+    event_type_labels = {
+        "birthday": "Anniversaire",
+        "anniversary": "Anniversaire de mariage",
+        "memorial": "Mémorial",
+        "promotion": "Promotion",
+        "special_event": "Événement spécial"
+    }
+    # Limit to the first 2 events to avoid overly long titles
+    event_names = []
+    for event in events[:2]:
+        prefix = f"{event.get('first_name', '')} {event['name']}".strip()
+        event_type_name = event_type_labels.get(event["type"], event["type"])
+        event_names.append(f"{prefix} - {event_type_name}")
+    title = ", ".join(event_names)
+    if len(events) > 2:
+        title += "..."
+    return title
+
 class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Date Countdown."""
 
@@ -26,17 +49,55 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
         """Handle the initial step."""
         _LOGGER.debug("Starting async_step_user with user_input: %s", user_input)
+        errors = {}
         if user_input is not None:
-            _LOGGER.info("Creating entry with default configuration")
-            return self.async_create_entry(
-                title="Date Countdown",
-                data={"events": []}  # No saint_of_the_day option, always enabled
-            )
+            # Validate date format
+            if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
+                errors["date"] = "invalid_date_format"
+                _LOGGER.warning("Invalid date format: %s", user_input["date"])
+            else:
+                try:
+                    day, month, year = map(int, user_input["date"].split('/'))
+                    date(year, month, day)  # Validate date
+                except (ValueError, TypeError) as e:
+                    errors["date"] = "invalid_date_format"
+                    _LOGGER.error("Date validation failed: %s", e)
+                else:
+                    _LOGGER.info("Creating entry with initial event: %s", user_input)
+                    initial_events = [
+                        {
+                            "name": user_input["name"],
+                            "first_name": user_input.get("first_name", ""),
+                            "date": user_input["date"],
+                            "type": user_input["type"]
+                        }
+                    ]
+                    return self.async_create_entry(
+                        title=_generate_entry_title(initial_events),
+                        data={},
+                        options={"events": initial_events}
+                    )
 
+        # Define translated labels for event types
+        event_type_options = {
+            "birthday": "Anniversaire",
+            "anniversary": "Anniversaire de mariage",
+            "memorial": "Mémorial",
+            "promotion": "Promotion",
+            "special_event": "Événement spécial"
+        }
+
+        _LOGGER.info("Showing form for step 'user'")
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({}),  # Empty schema, no user input required
-            description_placeholders={"event_types": ", ".join(EVENT_TYPES)}
+            data_schema=vol.Schema({
+                vol.Required("name", description="Nom de l'événement ou de la personne"): str,
+                vol.Optional("first_name", description="Prénom (optionnel)"): str,
+                vol.Required("date", description=f"Date (format: {DATE_FORMAT})"): str,
+                vol.Required("type", description="Type d'événement"): vol.In(event_type_options),
+            }),
+            errors=errors,
+            description_placeholders={"date_format": DATE_FORMAT}
         )
 
     @staticmethod
@@ -52,6 +113,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         _LOGGER.debug("Initializing DateCountdownOptionsFlow")
+        self.config_entry = config_entry
         self.events = None  # Initialize events later in async_step_init
 
     async def async_step_init(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
@@ -64,6 +126,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
 
         if user_input is not None:
             action = user_input.get("action")
+            _LOGGER.debug("Action selected: %s", action)
             if action not in ["add", "edit", "delete"]:
                 _LOGGER.warning("Invalid action received: %s", action)
                 return self.async_show_form(
@@ -77,12 +140,26 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
             if action == "add":
                 return await self.async_step_add_event()
             elif action in ("edit", "delete"):
+                if not self.events:
+                    _LOGGER.warning("Cannot proceed with action %s: no events available", action)
+                    return self.async_show_form(
+                        step_id="init",
+                        data_schema=vol.Schema({
+                            vol.Required("action"): vol.In(["add"])
+                        }),
+                        errors={"base": "no_events"}
+                    )
                 return await self.async_step_select_event(user_input)
 
+        # Dynamically set available actions based on whether events exist
+        available_actions = ["add"]
+        if self.events:
+            available_actions.extend(["edit", "delete"])
+        _LOGGER.info("Showing form for step 'init' with available actions: %s", available_actions)
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({
-                vol.Required("action"): vol.In(["add", "edit", "delete"])
+                vol.Required("action"): vol.In(available_actions)
             })
         )
 
@@ -110,9 +187,20 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                         "date": user_input["date"],
                         "type": user_input["type"]
                     })
+                    _LOGGER.info("Updated events list: %s", self.events)
+                    # Update the entry with the new events
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        title=_generate_entry_title(self.events),
+                        options={"events": self.events}
+                    )
+                    # Force reload of the entry to ensure sensors are updated
+                    await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                    _LOGGER.info("Reloaded config entry %s after adding event", self.config_entry.entry_id)
                     return self.async_create_entry(
-                        title="",
-                        data={"events": self.events}  # No saint_of_the_day option
+                        title=_generate_entry_title(self.events),
+                        data={},
+                        options={"events": self.events}
                     )
 
         # Define translated labels for event types
@@ -124,6 +212,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
             "special_event": "Événement spécial"
         }
 
+        _LOGGER.info("Showing form for step 'add_event'")
         return self.async_show_form(
             step_id="add_event",
             data_schema=vol.Schema({
@@ -144,7 +233,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
             return self.async_show_form(
                 step_id="init",
                 data_schema=vol.Schema({
-                    vol.Required("action"): vol.In(["add", "edit", "delete"])
+                    vol.Required("action"): vol.In(["add"])
                 }),
                 errors={"base": "no_events"}
             )
@@ -168,9 +257,20 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
             elif user_input["action"] == "delete":
                 self.events.pop(event_index)
                 _LOGGER.info("Deleted event at index: %s", event_index)
+                _LOGGER.info("Updated events list: %s", self.events)
+                # Update the entry with the new events
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry,
+                    title=_generate_entry_title(self.events),
+                    options={"events": self.events}
+                )
+                # Force reload of the entry to ensure sensors are updated
+                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                _LOGGER.info("Reloaded config entry %s after deleting event", self.config_entry.entry_id)
                 return self.async_create_entry(
-                    title="",
-                    data={"events": self.events}  # No saint_of_the_day option
+                    title=_generate_entry_title(self.events),
+                    data={},
+                    options={"events": self.events}
                 )
 
         event_options = {str(i): f"{e['name']} ({e['type']})" for i, e in enumerate(self.events)}
@@ -206,9 +306,20 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                         "date": user_input["date"],
                         "type": user_input["type"]
                     }
+                    _LOGGER.info("Updated events list: %s", self.events)
+                    # Update the entry with the new events
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        title=_generate_entry_title(self.events),
+                        options={"events": self.events}
+                    )
+                    # Force reload of the entry to ensure sensors are updated
+                    await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                    _LOGGER.info("Reloaded config entry %s after editing event", self.config_entry.entry_id)
                     return self.async_create_entry(
-                        title="",
-                        data={"events": self.events}  # No saint_of_the_day option
+                        title=_generate_entry_title(self.events),
+                        data={},
+                        options={"events": self.events}
                     )
 
         event = self.events[event_index]
