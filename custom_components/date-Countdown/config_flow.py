@@ -1,12 +1,14 @@
 """Config flow for Date Countdown integration."""
 
 from typing import Any, Dict, Optional
+import re
 import voluptuous as vol
+from datetime import date
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
-from .const import DOMAIN, EVENT_TYPES
+from .const import DOMAIN, EVENT_TYPES, DATE_FORMAT
 
 class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Date Countdown."""
@@ -16,7 +18,10 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
         """Handle the initial step."""
         if user_input is not None:
-            return self.async_create_entry(title="Date Countdown", data=user_input)
+            return self.async_create_entry(
+                title="Date Countdown",
+                data={"saint_of_the_day": user_input["saint_of_the_day"], "events": []}
+            )
 
         return self.async_show_form(
             step_id="user",
@@ -62,32 +67,36 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
         errors = {}
         if user_input is not None:
             # Validate date format
-            try:
-                day, month, year = map(int, user_input["date"].split('/'))
-                date(year, month, day)  # Validate date
-            except (ValueError, TypeError):
+            if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
                 errors["date"] = "invalid_date_format"
             else:
-                self.events.append({
-                    "name": user_input["name"],
-                    "first_name": user_input.get("first_name", ""),
-                    "date": user_input["date"],
-                    "type": user_input["type"]
-                })
-                return self.async_create_entry(
-                    title="",
-                    data={"saint_of_the_day": self.config_entry.options.get("saint_of_the_day", True), "events": self.events}
-                )
+                try:
+                    day, month, year = map(int, user_input["date"].split('/'))
+                    date(year, month, day)  # Validate date
+                except (ValueError, TypeError):
+                    errors["date"] = "invalid_date_format"
+                else:
+                    self.events.append({
+                        "name": user_input["name"],
+                        "first_name": user_input.get("first_name", ""),
+                        "date": user_input["date"],
+                        "type": user_input["type"]
+                    })
+                    return self.async_create_entry(
+                        title="",
+                        data={"saint_of_the_day": self.config_entry.options.get("saint_of_the_day", True), "events": self.events}
+                    )
 
         return self.async_show_form(
             step_id="add_event",
             data_schema=vol.Schema({
                 vol.Required("name"): str,
                 vol.Optional("first_name"): str,
-                vol.Required("date"): str,
+                vol.Required("date", description=f"Format: {DATE_FORMAT}"): str,
                 vol.Required("type"): vol.In(EVENT_TYPES)
             }),
-            errors=errors
+            errors=errors,
+            description_placeholders={"date_format": DATE_FORMAT}
         )
 
     async def async_step_select_event(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
@@ -117,22 +126,25 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
         errors = {}
         event_index = user_input.get("event_index", 0)
         if user_input is not None and "name" in user_input:
-            try:
-                day, month, year = map(int, user_input["date"].split('/'))
-                date(year, month, day)
-            except (ValueError, TypeError):
+            if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
                 errors["date"] = "invalid_date_format"
             else:
-                self.events[event_index] = {
-                    "name": user_input["name"],
-                    "first_name": user_input.get("first_name", ""),
-                    "date": user_input["date"],
-                    "type": user_input["type"]
-                }
-                return self.async_create_entry(
-                    title="",
-                    data={"saint_of_the_day": self.config_entry.options.get("saint_of_the_day", True), "events": self.events}
-                )
+                try:
+                    day, month, year = map(int, user_input["date"].split('/'))
+                    date(year, month, day)
+                except (ValueError, TypeError):
+                    errors["date"] = "invalid_date_format"
+                else:
+                    self.events[event_index] = {
+                        "name": user_input["name"],
+                        "first_name": user_input.get("first_name", ""),
+                        "date": user_input["date"],
+                        "type": user_input["type"]
+                    }
+                    return self.async_create_entry(
+                        title="",
+                        data={"saint_of_the_day": self.config_entry.options.get("saint_of_the_day", True), "events": self.events}
+                    )
 
         event = self.events[event_index]
         return self.async_show_form(
@@ -140,8 +152,9 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
             data_schema=vol.Schema({
                 vol.Required("name", default=event["name"]): str,
                 vol.Optional("first_name", default=event.get("first_name", "")): str,
-                vol.Required("date", default=event["date"]): str,
+                vol.Required("date", default=event["date"], description=f"Format: {DATE_FORMAT}"): str,
                 vol.Required("type", default=event["type"]): vol.In(EVENT_TYPES)
             }),
-            errors=errors
+            errors=errors,
+            description_placeholders={"date_format": DATE_FORMAT}
         )
