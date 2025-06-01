@@ -1,8 +1,8 @@
 """Config flow for Date Countdown integration.
 
 This module handles the configuration flow for the Date Countdown integration,
-allowing users to set up the integration and manage events (add, edit, delete)
-through the Home Assistant UI.
+allowing users to manage events (add, edit, delete) through the Home Assistant UI.
+The 'Saint du jour' sensor is enabled by default and not configurable.
 """
 
 import logging
@@ -27,17 +27,15 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         _LOGGER.debug("Starting async_step_user with user_input: %s", user_input)
         if user_input is not None:
-            _LOGGER.info("Creating entry with saint_of_the_day: %s", user_input["saint_of_the_day"])
+            _LOGGER.info("Creating entry with default configuration")
             return self.async_create_entry(
                 title="Date Countdown",
-                data={"saint_of_the_day": user_input["saint_of_the_day"], "events": []}
+                data={"events": []}  # No saint_of_the_day option, always enabled
             )
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({
-                vol.Optional("saint_of_the_day", default=True): bool,
-            }),
+            data_schema=vol.Schema({}),  # Empty schema, no user input required
             description_placeholders={"event_types": ", ".join(EVENT_TYPES)}
         )
 
@@ -114,7 +112,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                     })
                     return self.async_create_entry(
                         title="",
-                        data={"saint_of_the_day": self.config_entry.options.get("saint_of_the_day", True), "events": self.events}
+                        data={"events": self.events}  # No saint_of_the_day option
                     )
 
         # Define translated labels for event types
@@ -172,7 +170,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                 _LOGGER.info("Deleted event at index: %s", event_index)
                 return self.async_create_entry(
                     title="",
-                    data={"saint_of_the_day": self.config_entry.options.get("saint_of_the_day", True), "events": self.events}
+                    data={"events": self.events}  # No saint_of_the_day option
                 )
 
         event_options = {str(i): f"{e['name']} ({e['type']})" for i, e in enumerate(self.events)}
@@ -210,7 +208,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                     }
                     return self.async_create_entry(
                         title="",
-                        data={"saint_of_the_day": self.config_entry.options.get("saint_of_the_day", True), "events": self.events}
+                        data={"events": self.events}  # No saint_of_the_day option
                     )
 
         event = self.events[event_index]
