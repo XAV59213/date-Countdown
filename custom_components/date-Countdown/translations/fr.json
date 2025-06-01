@@ -1,0 +1,53 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Configurer Date Countdown. Types d'événements disponibles : {event_types}",
+        "data": {
+          "saint_of_the_day": "Afficher le saint du jour"
+        }
+      },
+      "add_event": {
+        "description": "Ajouter un nouvel événement (date au format {date_format})",
+        "data": {
+          "name": "Nom",
+          "first_name": "Prénom (optionnel)",
+          "date": "Date ({date_format})",
+          "type": "Type d'événement"
+        }
+      },
+      "init": {
+        "description": "Choisissez une action",
+        "data": {
+          "action": "Action"
+        }
+      },
+      "select_event": {
+        "description": "Sélectionnez un événement à modifier ou supprimer",
+        "data": {
+          "event": "Événement",
+          "action": "Action"
+        }
+      },
+      "edit_event": {
+        "description": "Modifier l'événement (date au format {date_format})",
+        "data": {
+          "name": "Nom",
+          "first_name": "Prénom (optionnel)",
+          "date": "Date ({date_format})",
+          "type": "Type d'événement"
+        }
+      }
+    },
+    "error": {
+      "invalid_date_format": "Format de date invalide. Utilisez JJ/MM/AAAA."
+    },
+    "option": {
+      "action": {
+        "add": "Ajouter un événement",
+        "edit": "Modifier un événement",
+        "delete": "Supprimer un événement"
+      }
+    }
+  }
+}
