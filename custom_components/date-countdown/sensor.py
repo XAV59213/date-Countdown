@@ -1,5 +1,6 @@
 """Sensor platform for Date Countdown."""
 
+import logging
 from datetime import date
 from typing import Any, Dict, Optional
 
@@ -9,6 +10,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, EVENT_TYPES, WEDDING_ANNIVERSARIES, SAINTS_BY_DATE
+
+_LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities) -> None:
     """Set up Date Countdown sensors from a config entry."""
@@ -23,9 +26,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             event["date"]
         ))
 
-    # Add saint of the day sensor if enabled
-    if entry.options.get("saint_of_the_day", True):
-        sensors.append(SaintOfTheDaySensor())
+    # Always add saint of the day sensor
+    saint_sensor = SaintOfTheDaySensor()
+    sensors.append(saint_sensor)
+    _LOGGER.info("Created SaintOfTheDaySensor with unique_id: %s", saint_sensor.unique_id)
 
     hass.data[DOMAIN][entry.entry_id] = sensors
     async_add_entities(sensors)
