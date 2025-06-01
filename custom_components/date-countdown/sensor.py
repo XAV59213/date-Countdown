@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, EVENT_TYPES, WEDDING_ANNIVERSARIES, SAINTS_BY_DATE
+from .const import DOMAIN, EVENT_TYPES, WEDDING_ANNIVERSARIES, SAINTS_BY_DATE, PUBLIC_HOLIDAYS_2025
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,6 +30,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     saint_sensor = SaintOfTheDaySensor()
     sensors.append(saint_sensor)
     _LOGGER.info("Created SaintOfTheDaySensor with unique_id: %s", saint_sensor.unique_id)
+
+    # Always add public holiday sensor
+    holiday_sensor = PublicHolidaySensor()
+    sensors.append(holiday_sensor)
+    _LOGGER.info("Created PublicHolidaySensor with unique_id: %s", holiday_sensor.unique_id)
 
     hass.data[DOMAIN][entry.entry_id] = sensors
     async_add_entities(sensors)
@@ -154,7 +159,58 @@ class SaintOfTheDaySensor(SensorEntity):
         """Update the sensor with saint for the current date."""
         today = dt_util.now().date()
         date_key = f"{today.day:02d}:{today.month:02d}"
-
-        # Get saint from the list
+        _LOGGER.debug("Updating SaintOfTheDaySensor with date_key: %s", date_key)
         self._saint = SAINTS_BY_DATE.get(date_key, "Aucun saint aujourd'hui")
         self._state = self._saint
+
+class PublicHolidaySensor(SensorEntity):
+    """Representation of a Public Holiday sensor."""
+
+    def __init__(self) -> None:
+        """Initialize the sensor."""
+        self._state = None
+        self._next_holiday = None
+        self._next_date = None
+        self._attr_unique_id = "public_holiday"
+        self._attr_name = "Jour férié"
+        self._attr_icon = "mdi:calendar-star"
+
+    @property
+    def state(self) -> Optional[str]:
+        """Return the state of the sensor."""
+        return self._state
+
+    @property
+    def extra_state_attributes(self) -> Dict[str, Any]:
+        """Return the state attributes."""
+        return {
+            "next_holiday": self._next_holiday,
+            "next_date": self._next_date,
+            "friendly_name": self._attr_name
+        }
+
+    async def async_update(self) -> None:
+        """Update the sensor with holiday for the current date."""
+        today = dt_util.now().date()
+        date_key = f"{today.day:02d}:{today.month:02d}"
+        _LOGGER.debug("Updating PublicHolidaySensor with date_key: %s", date_key)
+        self._state = PUBLIC_HOLIDAYS_2025.get(date_key, "Aucun jour férié")
+
+        # Find the next holiday
+        current_year = today.year
+        for day_month, name in sorted(PUBLIC_HOLIDAYS_2025.items(), key=lambda x: (x[0].split(":")[1], x[0].split(":")[0])):
+            day, month = map(int, day_month.split(":"))
+            try:
+                holiday_date = date(current_year, month, day)
+                if holiday_date >= today:
+                    self._next_holiday = name
+                    self._next_date = holiday_date.strftime("%d/%m/%Y")
+                    return
+            except ValueError:
+                # Skip invalid dates (e.g., 29/02 in non-leap years)
+                continue
+        # If no holiday found this year, use the first one next year
+        first_key = next(iter(PUBLIC_HOLIDAYS_2025))
+        day, month = map(int, first_key.split(":"))
+        self._next_holiday = PUBLIC_HOLIDAYS_2025[first_key]
+        self._next_date = date(current_year + 1, month, day).strftime("%d/%m/%Y")
