@@ -39,7 +39,13 @@
       "invalid_date_format": "Format de date invalide. Utilisez JJ/MM/AAAA.",
       "no_events": "Aucun événement configuré. Veuillez d'abord ajouter un événement.",
       "event_required": "Veuillez sélectionner un événement.",
-      "invalid_action": "Action invalide. Veuillez sélectionner une action valide."
+      "invalid_action": "Action invalide. Veuillez sélectionner une action valide.",
+      "invalid_name": "Nom invalide. Le nom ne peut pas être vide."
+    },
+    "abort": {
+      "event_added": "Événement ajouté avec succès.",
+      "event_deleted": "Événement supprimé avec succès.",
+      "event_updated": "Événement modifié avec succès."
     },
     "options": {
       "action": {
