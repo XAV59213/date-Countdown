@@ -1,5 +1,7 @@
+```python
 """Config flow for Date Countdown integration."""
 
+import logging
 from typing import Any, Dict, Optional
 import re
 import voluptuous as vol
@@ -10,6 +12,8 @@ from homeassistant.data_entry_flow import FlowResult
 
 from .const import DOMAIN, EVENT_TYPES, DATE_FORMAT
 
+_LOGGER = logging.getLogger(__name__)
+
 class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Date Countdown."""
 
@@ -17,7 +21,9 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
         """Handle the initial step."""
+        _LOGGER.debug("Starting async_step_user with user_input: %s", user_input)
         if user_input is not None:
+            _LOGGER.info("Creating entry with saint_of_the_day: %s", user_input["saint_of_the_day"])
             return self.async_create_entry(
                 title="Date Countdown",
                 data={"saint_of_the_day": user_input["saint_of_the_day"], "events": []}
@@ -35,6 +41,7 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:
         """Get the options flow for this handler."""
+        _LOGGER.debug("Initializing options flow for config_entry: %s", config_entry.entry_id)
         return DateCountdownOptionsFlow(config_entry)
 
 class DateCountdownOptionsFlow(config_entries.OptionsFlow):
@@ -42,17 +49,27 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
-        self.config_entry = config_entry
+        _LOGGER.debug("Initializing DateCountdownOptionsFlow")
         self.events = self.config_entry.options.get("events", [])
 
     async def async_step_init(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
         """Manage the options."""
+        _LOGGER.debug("async_step_init called with user_input: %s", user_input)
         if user_input is not None:
-            if user_input.get("action") == "add":
+            action = user_input.get("action")
+            if action not in ["add", "edit", "delete"]:
+                _LOGGER.warning("Invalid action received: %s", action)
+                return self.async_show_form(
+                    step_id="init",
+                    data_schema=vol.Schema({
+                        vol.Required("action"): vol.In(["add", "edit", "delete"])
+                    }),
+                    errors={"action": "invalid_action"}
+                )
+            _LOGGER.info("Selected action: %s", action)
+            if action == "add":
                 return await self.async_step_add_event()
-            elif user_input.get("action") == "edit":
-                return await self.async_step_select_event(user_input)
-            elif user_input.get("action") == "delete":
+            elif action in ("edit", "delete"):
                 return await self.async_step_select_event(user_input)
 
         return self.async_show_form(
@@ -64,18 +81,22 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_add_event(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
         """Handle adding a new event."""
+        _LOGGER.debug("async_step_add_event called with user_input: %s", user_input)
         errors = {}
         if user_input is not None:
             # Validate date format
             if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
                 errors["date"] = "invalid_date_format"
+                _LOGGER.warning("Invalid date format: %s", user_input["date"])
             else:
                 try:
                     day, month, year = map(int, user_input["date"].split('/'))
                     date(year, month, day)  # Validate date
-                except (ValueError, TypeError):
+                except (ValueError, TypeError) as e:
                     errors["date"] = "invalid_date_format"
+                    _LOGGER.error("Date validation failed: %s", e)
                 else:
+                    _LOGGER.info("Adding event: %s", user_input)
                     self.events.append({
                         "name": user_input["name"],
                         "first_name": user_input.get("first_name", ""),
@@ -87,13 +108,18 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                         data={"saint_of_the_day": self.config_entry.options.get("saint_of_the_day", True), "events": self.events}
                     )
 
+        # Define translated labels for event types
+        event_type_options = {
+            event_type: event_type.capitalize() for event_type in EVENT_TYPES
+        }
+
         return self.async_show_form(
             step_id="add_event",
             data_schema=vol.Schema({
-                vol.Required("name"): str,
-                vol.Optional("first_name"): str,
-                vol.Required("date", description=f"Format: {DATE_FORMAT}"): str,
-                vol.Required("type"): vol.In(EVENT_TYPES)
+                vol.Required("name", description="Nom de l'événement ou de la personne"): str,
+                vol.Optional("first_name", description="Prénom (optionnel)"): str,
+                vol.Required("date", description=f"Date (format: {DATE_FORMAT})"): str,
+                vol.Required("type", description="Type d'événement"): vol.In(event_type_options),
             }),
             errors=errors,
             description_placeholders={"date_format": DATE_FORMAT}
@@ -101,12 +127,36 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_select_event(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
         """Handle selecting an event to edit or delete."""
+        _LOGGER.debug("async_step_select_event called with user_input: %s", user_input)
+        if not self.events:
+            _LOGGER.warning("No events available for selection")
+            return self.async_show_form(
+                step_id="init",
+                data_schema=vol.Schema({
+                    vol.Required("action"): vol.In(["add", "edit", "delete"])
+                }),
+                errors={"base": "no_events"}
+            )
+
         if user_input is not None:
+            if "event" not in user_input:
+                _LOGGER.warning("No event selected in user_input")
+                return self.async_show_form(
+                    step_id="select_event",
+                    data_schema=vol.Schema({
+                        vol.Required("event"): vol.In({str(i): f"{e['name']} ({e['type']})" for i, e in enumerate(self.events)}),
+                        vol.Required("action"): str
+                    }),
+                    errors={"event": "event_required"}
+                )
+
             event_index = int(user_input["event"])
+            _LOGGER.info("Selected event index: %s for action: %s", event_index, user_input["action"])
             if user_input["action"] == "edit":
                 return await self.async_step_edit_event({"event_index": event_index})
             elif user_input["action"] == "delete":
                 self.events.pop(event_index)
+                _LOGGER.info("Deleted event at index: %s", event_index)
                 return self.async_create_entry(
                     title="",
                     data={"saint_of_the_day": self.config_entry.options.get("saint_of_the_day", True), "events": self.events}
@@ -123,18 +173,22 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_edit_event(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
         """Handle editing an event."""
+        _LOGGER.debug("async_step_edit_event called with user_input: %s", user_input)
         errors = {}
         event_index = user_input.get("event_index", 0)
         if user_input is not None and "name" in user_input:
             if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
                 errors["date"] = "invalid_date_format"
+                _LOGGER.warning("Invalid date format for edit: %s", user_input["date"])
             else:
                 try:
                     day, month, year = map(int, user_input["date"].split('/'))
                     date(year, month, day)
-                except (ValueError, TypeError):
+                except (ValueError, TypeError) as e:
                     errors["date"] = "invalid_date_format"
+                    _LOGGER.error("Date validation failed for edit: %s", e)
                 else:
+                    _LOGGER.info("Updating event at index %s: %s", event_index, user_input)
                     self.events[event_index] = {
                         "name": user_input["name"],
                         "first_name": user_input.get("first_name", ""),
@@ -147,14 +201,19 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                     )
 
         event = self.events[event_index]
+        # Define translated labels for event types
+        event_type_options = {
+            event_type: event_type.capitalize() for event_type in EVENT_TYPES
+        }
         return self.async_show_form(
             step_id="edit_event",
             data_schema=vol.Schema({
-                vol.Required("name", default=event["name"]): str,
-                vol.Optional("first_name", default=event.get("first_name", "")): str,
-                vol.Required("date", default=event["date"], description=f"Format: {DATE_FORMAT}"): str,
-                vol.Required("type", default=event["type"]): vol.In(EVENT_TYPES)
+                vol.Required("name", description="Nom de l'événement ou de la personne", default=event["name"]): str,
+                vol.Optional("first_name", description="Prénom (optionnel)", default=event.get("first_name", "")): str,
+                vol.Required("date", description=f"Date (format: {DATE_FORMAT})", default=event["date"]): str,
+                vol.Required("type", description="Type d'événement", default=event["type"]): vol.In(event_type_options),
             }),
             errors=errors,
             description_placeholders={"date_format": DATE_FORMAT}
         )
+```
