@@ -12,6 +12,7 @@ from .const import DOMAIN, EVENT_TYPES, WEDDING_ANNIVERSARIES, SAINTS_BY_DATE
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Date Countdown sensors from a config entry."""
+    hass.data.setdefault(DOMAIN, {})
     sensors = []
 
     # Add event sensors
@@ -53,6 +54,13 @@ class DateCountdownSensor(SensorEntity):
         self._attr_unique_id = f"{event_type}_{name.lower().replace(' ', '_')}_{event_date.replace('/', '')}"
         self._attr_name = self._get_friendly_name()
         self._attr_unit_of_measurement = "days"
+        self._attr_icon = {
+            "birthday": "mdi:cake",
+            "anniversary": "mdi:ring",
+            "memorial": "mdi:candle",
+            "promotion": "mdi:briefcase",
+            "special_event": "mdi:star"
+        }.get(event_type, "mdi:calendar")
 
     def _get_friendly_name(self) -> str:
         """Return the friendly name based on event type."""
@@ -90,9 +98,10 @@ class DateCountdownSensor(SensorEntity):
     async def async_update(self) -> None:
         """Update the sensor."""
         try:
-            # Parse date
+            # Parse and validate date
             day, month, year = map(int, self._event_date.split('/'))
-        except ValueError:
+            date(year, month, day)
+        except (ValueError, TypeError):
             self._state = None
             self._years = None
             self._wedding_type = None
