@@ -1,13 +1,13 @@
 """Constants for Date Countdown integration."""
 
-import logging
-
-_LOGGER = logging.getLogger(__name__)
-
 DOMAIN = "date_countdown"
 PLATFORMS = ["sensor"]
 DATE_FORMAT = "DD/MM/YYYY"
 EVENT_TYPES = ["birthday", "anniversary", "memorial", "promotion", "special_event"]
+
+# Unique IDs for global sensors
+SAINT_OF_THE_DAY_ID = "global_saint_of_the_day"
+PUBLIC_HOLIDAY_ID = "global_public_holiday"
 
 WEDDING_ANNIVERSARIES = {
     1: "Noces de Coton",
@@ -455,5 +455,3 @@ PUBLIC_HOLIDAYS_2025 = {
     "11:11": "Armistice 1918",
     "25:12": "Noël"
 }
-
-_LOGGER.debug("Loaded constants: %s public holidays defined for 2025", len(PUBLIC_HOLIDAYS_2025))
