@@ -2,15 +2,19 @@
   "config": {
     "step": {
       "user": {
-        "description": "Configurez votre premier événement pour Date Countdown (date au format JJ/MM/AAAA)."
+        "description": "Sélectionnez le type d'événement à configurer.",
+        "data": {
+          "type": "Type d'événement"
+        }
       },
-      "add_event": {
-        "description": "Ajouter un nouvel événement (date au format JJ/MM/AAAA)",
+      "event_details": {
+        "description": "Ajoutez les détails de l'événement (dates au format JJ/MM/AAAA).",
         "data": {
           "name": "Nom de l'événement ou de la personne",
           "first_name": "Prénom (optionnel)",
-          "date": "Date (JJ/MM/AAAA)",
-          "type": "Type d'événement"
+          "date": "Date de naissance (pour mémorial) ou Date (autres types)",
+          "type": "Type d'événement",
+          "death_date": "Date de décès (optionnel, pour mémorial)"
         }
       },
       "init": {
@@ -19,19 +23,42 @@
           "action": "Action"
         }
       },
+      "add_event_type": {
+        "description": "Sélectionnez le type d'événement à ajouter.",
+        "data": {
+          "type": "Type d'événement"
+        }
+      },
+      "add_event": {
+        "description": "Ajoutez les détails de l'événement (dates au format JJ/MM/AAAA).",
+        "data": {
+          "name": "Nom de l'événement ou de la personne",
+          "first_name": "Prénom (optionnel)",
+          "date": "Date de naissance (pour mémorial) ou Date (autres types)",
+          "type": "Type d'événement",
+          "death_date": "Date de décès (optionnel, pour mémorial)"
+        }
+      },
       "select_event": {
         "data": {
           "event": "Événement",
           "action": "Action"
         }
       },
+      "edit_event_type": {
+        "description": "Sélectionnez le type d'événement à modifier.",
+        "data": {
+          "type": "Type d'événement"
+        }
+      },
       "edit_event": {
-        "description": "Modifier un événement (date au format JJ/MM/AAAA)",
+        "description": "Modifiez les détails de l'événement (dates au format JJ/MM/AAAA).",
         "data": {
           "name": "Nom de l'événement ou de la personne",
           "first_name": "Prénom (optionnel)",
-          "date": "Date (JJ/MM/AAAA)",
-          "type": "Type d'événement"
+          "date": "Date de naissance (pour mémorial) ou Date (autres types)",
+          "type": "Type d'événement",
+          "death_date": "Date de décès (optionnel, pour mémorial)"
         }
       }
     },
