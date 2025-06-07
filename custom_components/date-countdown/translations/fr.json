@@ -48,28 +48,5 @@
         "delete": "Supprimer un événement"
       }
     }
-  },
-  "entity": {
-    "sensor": {
-      "saint_of_the_day": {
-        "name": "Saint du jour",
-        "state": {
-          "no_saint": "Aucun saint aujourd'hui"
-        }
-      },
-      "public_holiday": {
-        "name": "Jour férié",
-        "state": {
-          "no_holiday": "Aucun jour férié"
-        }
-      }
-    }
-  },
-  "state_attributes": {
-    "sensor": {
-      "is_public_holiday": {
-        "name": "Jour férié"
-      }
-    }
   }
 }
