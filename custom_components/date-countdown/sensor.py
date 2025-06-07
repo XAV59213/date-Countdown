@@ -37,6 +37,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             # Validate date format (DD/MM/YYYY)
             day, month, year = map(int, event["date"].split('/'))
             date(year, month, day)  # This will raise ValueError if the date is invalid
+            # Validate death_date if present (for memorial)
+            if event.get("death_date"):
+                day, month, year = map(int, event["death_date"].split('/'))
+                date(year, month, day)  # Validate death_date
         except (ValueError, TypeError) as e:
             _LOGGER.error("Invalid date format for event %s: %s. Expected DD/MM/YYYY.", event, e)
             continue
@@ -45,7 +49,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             event["name"],
             event.get("first_name", ""),
             event["type"],
-            event["date"]
+            event["date"],
+            event.get("death_date")
         )
         sensors.append(event_sensor)
         _LOGGER.info("Created DateCountdownSensor with unique_id: %s, name: %s", event_sensor.unique_id, event_sensor.name)
@@ -64,15 +69,18 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class DateCountdownSensor(SensorEntity):
     """Representation of a Date Countdown sensor."""
 
-    def __init__(self, name: str, first_name: str, event_type: str, event_date: str) -> None:
+    def __init__(self, name: str, first_name: str, event_type: str, event_date: str, death_date: Optional[str] = None) -> None:
         """Initialize the sensor."""
         self._name = name
         self._first_name = first_name
         self._event_type = event_type
         self._event_date = event_date
+        self._death_date = death_date
         self._state = None
         self._years = None
         self._wedding_type = None
+        self._age_if_alive = None
+        self._years_since_death = None
         self._attr_unique_id = f"{event_type}_{name.lower().replace(' ', '_')}_{event_date.replace('/', '')}"
         self._attr_name = self._get_friendly_name()
         self._attr_unit_of_measurement = "days"
@@ -83,7 +91,8 @@ class DateCountdownSensor(SensorEntity):
             "promotion": "mdi:briefcase",
             "special_event": "mdi:star"
         }.get(event_type, "mdi:calendar")
-        _LOGGER.debug("Initialized DateCountdownSensor: unique_id=%s, name=%s, date=%s", self._attr_unique_id, self._attr_name, self._event_date)
+        _LOGGER.debug("Initialized DateCountdownSensor: unique_id=%s, name=%s, date=%s, death_date=%s", 
+                      self._attr_unique_id, self._attr_name, self._event_date, self._death_date)
 
     def _get_friendly_name(self) -> str:
         """Return the friendly name in the format 'Name - Event Type'."""
@@ -119,20 +128,29 @@ class DateCountdownSensor(SensorEntity):
             attributes["years"] = self._years
         if self._event_type == "anniversary" and self._wedding_type is not None:
             attributes["wedding_type"] = self._wedding_type
+        if self._event_type == "memorial":
+            if self._death_date:
+                attributes["death_date"] = self._death_date
+            if self._age_if_alive is not None:
+                attributes["age_if_alive"] = self._age_if_alive
+            if self._years_since_death is not None:
+                attributes["years_since_death"] = self._years_since_death
         _LOGGER.debug("Returning attributes for sensor %s: %s", self._attr_unique_id, attributes)
         return attributes
 
     async def async_update(self) -> None:
         """Update the sensor."""
         try:
-            # Parse and validate date
+            # Parse and validate event date
             day, month, year = map(int, self._event_date.split('/'))
-            date(year, month, day)
+            event_date = date(year, month, day)
         except (ValueError, TypeError) as e:
             _LOGGER.error("Failed to parse event date %s for sensor %s: %s", self._event_date, self._attr_unique_id, e)
             self._state = None
             self._years = None
             self._wedding_type = None
+            self._age_if_alive = None
+            self._years_since_death = None
             return
 
         today = dt_util.now().date()
@@ -154,3 +172,27 @@ class DateCountdownSensor(SensorEntity):
             self._wedding_type = WEDDING_ANNIVERSARIES[self._years]
         else:
             self._wedding_type = None
+
+        # Calculate memorial-specific attributes
+        if self._event_type == "memorial":
+            # Calculate age if alive (from birth date to today)
+            self._age_if_alive = today.year - event_date.year
+            if (today.month, today.day) < (event_date.month, event_date.day):
+                self._age_if_alive -= 1
+
+            # Calculate years since death if death_date is provided
+            if self._death_date:
+                try:
+                    day, month, year = map(int, self._death_date.split('/'))
+                    death_date = date(year, month, day)
+                    self._years_since_death = today.year - death_date.year
+                    if (today.month, today.day) < (death_date.month, death_date.day):
+                        self._years_since_death -= 1
+                except (ValueError, TypeError) as e:
+                    _LOGGER.error("Failed to parse death date %s for sensor %s: %s", self._death_date, self._attr_unique_id, e)
+                    self._years_since_death = None
+            else:
+                self._years_since_death = None
+        else:
+            self._age_if_alive = None
+            self._years_since_death = None
