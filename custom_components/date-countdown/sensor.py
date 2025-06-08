@@ -8,7 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, EVENT_TYPES, WEDDING_ANNIVERSARIES
+from .const import DOMAIN, EVENT_TYPES, WEDDING_ANNIVERSARIES, AGE_CATEGORIES, AGE_CATEGORY_ICONS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -81,6 +81,7 @@ class DateCountdownSensor(SensorEntity):
         self._wedding_type = None
         self._age_if_alive = None
         self._years_since_death = None
+        self._age_category = None
         self._attr_unique_id = f"{event_type}_{name.lower().replace(' ', '_')}_{event_date.replace('/', '')}"
         self._attr_name = self._get_friendly_name()
         self._attr_unit_of_measurement = "days"
@@ -126,6 +127,16 @@ class DateCountdownSensor(SensorEntity):
         }
         if self._years is not None:
             attributes["years"] = self._years
+            # Déterminer la catégorie d'âge pour les anniversaires
+            if self._event_type == "birthday":
+                self._age_category = None
+                for (min_age, max_age), category in AGE_CATEGORIES.items():
+                    if min_age <= self._years <= max_age:
+                        self._age_category = category
+                        break
+                attributes["age_category"] = self._age_category if self._age_category else "Non catégorisé"
+                # Utiliser l'icône définie dans AGE_CATEGORY_ICONS
+                self._attr_icon = AGE_CATEGORY_ICONS.get(self._age_category, "mdi:cake") if self._event_type == "birthday" else self._attr_icon
         if self._event_type == "anniversary" and self._wedding_type is not None:
             attributes["wedding_type"] = self._wedding_type
         if self._event_type == "memorial":
@@ -151,6 +162,7 @@ class DateCountdownSensor(SensorEntity):
             self._wedding_type = None
             self._age_if_alive = None
             self._years_since_death = None
+            self._age_category = None
             return
 
         today = dt_util.now().date()
