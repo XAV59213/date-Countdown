@@ -86,36 +86,36 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if self._event_type == "retirement":
                 if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["start_date"]):
                     errors["start_date"] = "invalid_date_format"
-                    _LOGGER.warning("Invalid start date format: %s", user_input["start_date"])
+                    _LOGGER.error("Invalid start date format: %s", user_input["start_date"])
                 if not errors:
                     try:
                         day, month, year = map(int, user_input["start_date"].split('/'))
                         date(year, month, day)
                     except (ValueError, TypeError) as e:
                         errors["start_date"] = "invalid_date_format"
-                        _LOGGER.error("Date validation failed: %s", e)
+                        _LOGGER.error("Date validation failed for start_date %s: %s", user_input["start_date"], e)
             else:
                 if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
                     errors["date"] = "invalid_date_format"
-                    _LOGGER.warning("Invalid date format: %s", user_input["date"])
+                    _LOGGER.error("Invalid date format: %s", user_input["date"])
                 elif self._event_type == "memorial" and user_input.get("death_date"):
                     if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["death_date"]):
-                        errors["death_date"] = "invalid_date_format"
-                        _LOGGER.warning("Invalid death date format: %s", user_input["death_date"])
+                        errors["death_date"] = "invalid_memorial_date"
+                        _LOGGER.error("Invalid death date format: %s", user_input["death_date"])
                     else:
                         try:
                             day, month, year = map(int, user_input["death_date"].split('/'))
                             date(year, month, day)
                         except (ValueError, TypeError) as e:
-                            errors["death_date"] = "invalid_date_format"
-                            _LOGGER.error("Death date validation failed: %s", e)
+                            errors["death_date"] = "invalid_memorial_date"
+                            _LOGGER.error("Date validation failed for death_date %s: %s", user_input["death_date"], e)
                 if not errors:
                     try:
                         day, month, year = map(int, user_input["date"].split('/'))
                         date(year, month, day)
                     except (ValueError, TypeError) as e:
                         errors["date"] = "invalid_date_format"
-                        _LOGGER.error("Date validation failed: %s", e)
+                        _LOGGER.error("Date validation failed for date %s: %s", user_input["date"], e)
 
             if not errors:
                 _LOGGER.info("Creating entry with initial event: %s", user_input)
@@ -189,9 +189,9 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class DateCountdownOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for Date Countdown, limited to editing events."""
 
-    def __init__(self):
+    def __init__(self, config_entry: config_entries.ConfigEntry):
         """Initialize options flow."""
-        _LOGGER.debug("Initializing DateCountdownOptionsFlow")
+        _LOGGER.debug("Initializing DateCountdownOptionsFlow with config_entry: %s", config_entry.entry_id)
         self.events = None
         self._event_type = None
 
@@ -331,36 +331,36 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
             if self._event_type == "retirement":
                 if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["start_date"]):
                     errors["start_date"] = "invalid_date_format"
-                    _LOGGER.warning("Invalid start date format for edit: %s", user_input["start_date"])
+                    _LOGGER.error("Invalid start date format for edit: %s", user_input["start_date"])
                 if not errors:
                     try:
                         day, month, year = map(int, user_input["start_date"].split('/'))
                         date(year, month, day)
                     except (ValueError, TypeError) as e:
                         errors["start_date"] = "invalid_date_format"
-                        _LOGGER.error("Date validation failed for edit: %s", e)
+                        _LOGGER.error("Date validation failed for edit start_date %s: %s", user_input["start_date"], e)
             else:
                 if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
                     errors["date"] = "invalid_date_format"
-                    _LOGGER.warning("Invalid date format for edit: %s", user_input["date"])
+                    _LOGGER.error("Invalid date format for edit: %s", user_input["date"])
                 elif self._event_type == "memorial" and user_input.get("death_date"):
                     if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["death_date"]):
-                        errors["death_date"] = "invalid_date_format"
-                        _LOGGER.warning("Invalid death date format for edit: %s", user_input["death_date"])
+                        errors["death_date"] = "invalid_memorial_date"
+                        _LOGGER.error("Invalid death date format for edit: %s", user_input["death_date"])
                     else:
                         try:
                             day, month, year = map(int, user_input["death_date"].split('/'))
                             date(year, month, day)
                         except (ValueError, TypeError) as e:
-                            errors["death_date"] = "invalid_date_format"
-                            _LOGGER.error("Death date validation failed for edit: %s", e)
+                            errors["death_date"] = "invalid_memorial_date"
+                            _LOGGER.error("Date validation failed for edit death_date %s: %s", user_input["death_date"], e)
                 if not errors:
                     try:
                         day, month, year = map(int, user_input["date"].split('/'))
                         date(year, month, day)
                     except (ValueError, TypeError) as e:
                         errors["date"] = "invalid_date_format"
-                        _LOGGER.error("Date validation failed for edit: %s", e)
+                        _LOGGER.error("Date validation failed for edit date %s: %s", user_input["date"], e)
 
             if not errors:
                 _LOGGER.info("Updating event at index %s: %s", event_index, user_input)
