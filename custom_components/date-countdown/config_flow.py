@@ -192,6 +192,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry):
         """Initialize options flow."""
         _LOGGER.debug("Initializing DateCountdownOptionsFlow with config_entry: %s", config_entry.entry_id)
+        self._config_entry_id = config_entry.entry_id
         self.events = None
         self._event_type = None
 
@@ -199,7 +200,17 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
         """Manage the options, limited to editing."""
         _LOGGER.debug("async_step_init called with user_input: %s", user_input)
         if self.events is None:
-            self.events = self.hass.config_entries.async_get_entry(self.config_entry_id).options.get("events", [])
+            config_entry = self.hass.config_entries.async_get_entry(self._config_entry_id)
+            if not config_entry:
+                _LOGGER.error("Config entry %s not found", self._config_entry_id)
+                return self.async_show_form(
+                    step_id="init",
+                    data_schema=vol.Schema({
+                        vol.Required("action"): vol.In(["edit"])
+                    }),
+                    errors={"base": "config_entry_not_found"}
+                )
+            self.events = config_entry.options.get("events", [])
             _LOGGER.debug("Initialized events: %s", self.events)
 
         if not self.events:
@@ -382,12 +393,12 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                 _LOGGER.info("Updated events list: %s", self.events)
                 try:
                     self.hass.config_entries.async_update_entry(
-                        self.hass.config_entries.async_get_entry(self.config_entry_id),
+                        self.hass.config_entries.async_get_entry(self._config_entry_id),
                         title=_generate_entry_title(self.events),
                         options={"events": self.events}
                     )
-                    await self.hass.config_entries.async_reload(self.config_entry_id)
-                    _LOGGER.info("Reloaded config entry %s after editing event", self.config_entry_id)
+                    await self.hass.config_entries.async_reload(self._config_entry_id)
+                    _LOGGER.info("Reloaded config entry %s after editing event", self._config_entry_id)
                     return self.async_create_entry(
                         title=_generate_entry_title(self.events),
                         data={},
