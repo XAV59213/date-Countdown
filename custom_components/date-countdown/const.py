@@ -7,7 +7,7 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN = "date_countdown"
 PLATFORMS = ["sensor"]
 DATE_FORMAT = "DD/MM/YYYY"
-EVENT_TYPES = ["birthday", "anniversary", "memorial", "promotion", "special_event"]
+EVENT_TYPES = ["birthday", "anniversary", "memorial", "promotion", "special_event", "retirement"]
 
 # Catégories d'âge pour les anniversaires, une pour chaque âge de 0 à 120 ans
 AGE_CATEGORIES = {
@@ -257,6 +257,22 @@ AGE_CATEGORY_ICONS = {
     "As des Novas": "mdi:star-circle",
     "Rockstar des Galaxies": "mdi:orbit",
     "Héros Intergalactique": "mdi:medal"
+}
+
+# Échelons de la médaille du travail
+WORK_MEDAL_LEVELS = {
+    20: "Argent",
+    30: "Vermeil",
+    35: "Or",
+    40: "Grand Or"
+}
+
+# Échelons réduits pour travaux pénibles
+WORK_MEDAL_PENIBLE_LEVELS = {
+    18: "Argent",
+    25: "Vermeil",
+    30: "Or",
+    35: "Grand Or"
 }
 
 WEDDING_ANNIVERSARIES = {
