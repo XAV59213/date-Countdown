@@ -107,6 +107,7 @@ class DateCountdownSensor(SensorEntity):
         self._years_remaining = None
         self._years_retired = None
         self._work_medal = None
+        self._age_at_death = None  # Nouvelle variable pour l'âge au décès
         unique_id_base = f"{event_type}_{name.lower().replace(' ', '_')}"
         unique_id_date = (start_date or event_date or "").replace('/', '')
         self._attr_unique_id = f"{unique_id_base}_{unique_id_date}"
@@ -179,6 +180,8 @@ class DateCountdownSensor(SensorEntity):
                     attributes["age_if_alive"] = self._age_if_alive
                 if self._years_since_death is not None:
                     attributes["years_since_death"] = self._years_since_death
+                if self._age_at_death is not None:
+                    attributes["age_at_death"] = self._age_at_death
         _LOGGER.debug("Returning attributes for sensor %s: %s", self._attr_unique_id, attributes)
         return attributes
 
@@ -266,6 +269,7 @@ class DateCountdownSensor(SensorEntity):
                 self._age_if_alive = None
                 self._years_since_death = None
                 self._age_category = None
+                self._age_at_death = None
                 return
 
             next_event = date(today.year, event_date.month, event_date.day)
@@ -288,18 +292,24 @@ class DateCountdownSensor(SensorEntity):
                 if self._death_date:
                     try:
                         day, month, year = map(int, self._death_date.split('/'))
-                        death_date = date(year, month, year)
+                        death_date = date(year, month, day)
                         self._years_since_death = today.year - death_date.year
                         if (today.month, today.day) < (death_date.month, death_date.day):
                             self._years_since_death -= 1
+                        self._age_at_death = death_date.year - event_date.year
+                        if (death_date.month, death_date.day) < (event_date.month, event_date.day):
+                            self._age_at_death -= 1
                     except (ValueError, TypeError) as e:
                         _LOGGER.error("Failed to parse death date %s for sensor %s: %s", self._death_date, self._attr_unique_id, e)
                         self._years_since_death = None
+                        self._age_at_death = None
                 else:
                     self._years_since_death = None
+                    self._age_at_death = None
             else:
                 self._age_if_alive = None
                 self._years_since_death = None
+                self._age_at_death = None
 
             if self._event_type == "birthday":
                 self._age_category = None
