@@ -16,7 +16,7 @@
           "type": "Type d'événement",
           "death_date": "Date de décès (optionnel, pour mémorial)",
           "start_date": "Date de début du travail (pour retraite)",
-          "birth_date": "Date de naissance (optionnel, pour retraite)",
+          "retirement_date": "Date estimée de la retraite (pour retraite)",
           "is_penible": "Travaux pénibles (réduit les années pour la médaille)"
         }
       },
@@ -41,7 +41,7 @@
           "type": "Type d'événement",
           "death_date": "Date de décès (optionnel, pour mémorial)",
           "start_date": "Date de début du travail (pour retraite)",
-          "birth_date": "Date de naissance (optionnel, pour retraite)",
+          "retirement_date": "Date estimée de la retraite (pour retraite)",
           "is_penible": "Travaux pénibles (réduit les années pour la médaille)"
         }
       },
@@ -66,7 +66,7 @@
           "type": "Type d'événement",
           "death_date": "Date de décès (optionnel, pour mémorial)",
           "start_date": "Date de début du travail (pour retraite)",
-          "birth_date": "Date de naissance (optionnel, pour retraite)",
+          "retirement_date": "Date estimée de la retraite (pour retraite)",
           "is_penible": "Travaux pénibles (réduit les années pour la médaille)"
         }
       }
