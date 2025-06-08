@@ -55,7 +55,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             event.get("death_date"),
             event.get("start_date"),
             event.get("is_penible", False),
-            event.get("is_long_career", False)
+            event.get("career_type", "normale")
         )
         sensors.append(event_sensor)
         _LOGGER.info("Created DateCountdownSensor with unique_id: %s, name: %s", event_sensor.unique_id, event_sensor.name)
@@ -83,7 +83,7 @@ class DateCountdownSensor(SensorEntity):
         death_date: Optional[str] = None,
         start_date: Optional[str] = None,
         is_penible: bool = False,
-        is_long_career: bool = False
+        career_type: str = "normale"
     ) -> None:
         """Initialize the sensor."""
         self._name = name
@@ -93,7 +93,7 @@ class DateCountdownSensor(SensorEntity):
         self._death_date = death_date
         self._start_date = start_date
         self._is_penible = is_penible
-        self._is_long_career = is_long_career
+        self._career_type = career_type
         self._state = None
         self._years = None
         self._wedding_type = None
@@ -115,8 +115,8 @@ class DateCountdownSensor(SensorEntity):
             "special_event": "mdi:star",
             "retirement": "mdi:beach"
         }.get(event_type, "mdi:calendar")
-        _LOGGER.debug("Initialized DateCountdownSensor: unique_id=%s, name=%s, date=%s, start_date=%s, is_penible=%s, is_long_career=%s",
-                      self._attr_unique_id, self._attr_name, self._event_date, self._start_date, self._is_penible, self._is_long_career)
+        _LOGGER.debug("Initialized DateCountdownSensor: unique_id=%s, name=%s, date=%s, start_date=%s, is_penible=%s, career_type=%s",
+                      self._attr_unique_id, self._attr_name, self._event_date, self._start_date, self._is_penible, self._career_type)
 
     def _get_friendly_name(self) -> str:
         """Return the friendly name in the format 'Name - Event Type'."""
@@ -150,7 +150,7 @@ class DateCountdownSensor(SensorEntity):
         if self._event_type == "retirement":
             attributes["start_date"] = self._start_date
             attributes["is_penible"] = self._is_penible
-            attributes["is_long_career"] = self._is_long_career
+            attributes["career_type"] = self._career_type
             if self._years is not None:
                 attributes["years_worked"] = self._years
             if self._years_remaining is not None:
@@ -198,16 +198,16 @@ class DateCountdownSensor(SensorEntity):
             _LOGGER.debug("Sensor %s: Years worked calculated as %s", self._attr_unique_id, self._years)
 
             # Estimer la date de retraite
-            if self._is_long_career:
+            if self._career_type == "longue":
                 # Carrière longue : début à 17 ans, retraite à 60 ans
                 age_at_start = 17
                 retirement_age = 60
                 years_to_retirement = retirement_age - age_at_start  # 43 ans
             else:
-                # Standard : début à 20 ans, retraite à 64 ans
-                age_at_start = 20
+                # Carrière normale : début à 19 ans, retraite à 64 ans
+                age_at_start = 19
                 retirement_age = 64
-                years_to_retirement = retirement_age - age_at_start  # 44 ans
+                years_to_retirement = retirement_age - age_at_start  # 45 ans
 
             retirement_year = start_date.year + years_to_retirement
             retirement_date = date(retirement_year, start_date.month, start_date.day)
