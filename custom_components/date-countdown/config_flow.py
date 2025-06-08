@@ -87,17 +87,12 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["start_date"]):
                     errors["start_date"] = "invalid_date_format"
                     _LOGGER.warning("Invalid start date format: %s", user_input["start_date"])
-                if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["retirement_date"]):
-                    errors["retirement_date"] = "invalid_date_format"
-                    _LOGGER.warning("Invalid retirement date format: %s", user_input["retirement_date"])
                 if not errors:
                     try:
                         day, month, year = map(int, user_input["start_date"].split('/'))
                         date(year, month, day)
-                        day, month, year = map(int, user_input["retirement_date"].split('/'))
-                        date(year, month, day)
                     except (ValueError, TypeError) as e:
-                        errors["start_date" if "start_date" in user_input else "retirement_date"] = "invalid_date_format"
+                        errors["start_date"] = "invalid_date_format"
                         _LOGGER.error("Date validation failed: %s", e)
             else:
                 if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
@@ -133,7 +128,6 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ]
                 if self._event_type == "retirement":
                     initial_events[0]["start_date"] = user_input["start_date"]
-                    initial_events[0]["retirement_date"] = user_input["retirement_date"]
                     initial_events[0]["is_penible"] = user_input.get("is_penible", False)
                 elif self._event_type == "memorial" and user_input.get("death_date"):
                     initial_events[0]["death_date"] = user_input["death_date"]
@@ -159,7 +153,6 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required("name", description="Nom de l'événement ou de la personne"): str,
                 vol.Optional("first_name", description="Prénom (optionnel)"): str,
                 vol.Required("start_date", description=f"Date de début du travail (format: {DATE_FORMAT})"): str,
-                vol.Required("retirement_date", description=f"Date estimée de la retraite (format: {DATE_FORMAT})"): str,
                 vol.Optional("is_penible", description="Travaux pénibles (réduit les années pour la médaille)"): bool
             }
         else:
@@ -279,17 +272,12 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                 if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["start_date"]):
                     errors["start_date"] = "invalid_date_format"
                     _LOGGER.warning("Invalid start date format: %s", user_input["start_date"])
-                if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["retirement_date"]):
-                    errors["retirement_date"] = "invalid_date_format"
-                    _LOGGER.warning("Invalid retirement date format: %s", user_input["retirement_date"])
                 if not errors:
                     try:
                         day, month, year = map(int, user_input["start_date"].split('/'))
                         date(year, month, day)
-                        day, month, year = map(int, user_input["retirement_date"].split('/'))
-                        date(year, month, day)
                     except (ValueError, TypeError) as e:
-                        errors["start_date" if "start_date" in user_input else "retirement_date"] = "invalid_date_format"
+                        errors["start_date"] = "invalid_date_format"
                         _LOGGER.error("Date validation failed: %s", e)
             else:
                 if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
@@ -323,7 +311,6 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                 }
                 if self._event_type == "retirement":
                     event_data["start_date"] = user_input["start_date"]
-                    event_data["retirement_date"] = user_input["retirement_date"]
                     event_data["is_penible"] = user_input.get("is_penible", False)
                 elif self._event_type == "memorial" and user_input.get("death_date"):
                     event_data["death_date"] = user_input["death_date"]
@@ -350,7 +337,6 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                 vol.Required("name", description="Nom de l'événement ou de la personne"): str,
                 vol.Optional("first_name", description="Prénom (optionnel)"): str,
                 vol.Required("start_date", description=f"Date de début du travail (format: {DATE_FORMAT})"): str,
-                vol.Required("retirement_date", description=f"Date estimée de la retraite (format: {DATE_FORMAT})"): str,
                 vol.Optional("is_penible", description="Travaux pénibles (réduit les années pour la médaille)"): bool
             }
         else:
@@ -467,17 +453,12 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                 if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["start_date"]):
                     errors["start_date"] = "invalid_date_format"
                     _LOGGER.warning("Invalid start date format for edit: %s", user_input["start_date"])
-                if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["retirement_date"]):
-                    errors["retirement_date"] = "invalid_date_format"
-                    _LOGGER.warning("Invalid retirement date format for edit: %s", user_input["retirement_date"])
                 if not errors:
                     try:
                         day, month, year = map(int, user_input["start_date"].split('/'))
                         date(year, month, day)
-                        day, month, year = map(int, user_input["retirement_date"].split('/'))
-                        date(year, month, day)
                     except (ValueError, TypeError) as e:
-                        errors["start_date" if "start_date" in user_input else "retirement_date"] = "invalid_date_format"
+                        errors["start_date"] = "invalid_date_format"
                         _LOGGER.error("Date validation failed for edit: %s", e)
             else:
                 if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
@@ -511,7 +492,6 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                 }
                 if self._event_type == "retirement":
                     event_data["start_date"] = user_input["start_date"]
-                    event_data["retirement_date"] = user_input["retirement_date"]
                     event_data["is_penible"] = user_input.get("is_penible", False)
                 elif self._event_type == "memorial" and user_input.get("death_date"):
                     event_data["death_date"] = user_input["death_date"]
@@ -539,7 +519,6 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                 vol.Required("name", description="Nom de l'événement ou de la personne", default=event["name"]): str,
                 vol.Optional("first_name", description="Prénom (optionnel)", default=event.get("first_name", "")): str,
                 vol.Required("start_date", description=f"Date de début du travail (format: {DATE_FORMAT})", default=event["start_date"]): str,
-                vol.Required("retirement_date", description=f"Date estimée de la retraite (format: {DATE_FORMAT})", default=event["retirement_date"]): str,
                 vol.Optional("is_penible", description="Travaux pénibles (réduit les années pour la médaille)", default=event.get("is_penible", False)): bool
             }
         else:
