@@ -189,10 +189,9 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class DateCountdownOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for Date Countdown, limited to editing events."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+    def __init__(self):
         """Initialize options flow."""
         _LOGGER.debug("Initializing DateCountdownOptionsFlow")
-        self.config_entry = config_entry
         self.events = None
         self._event_type = None
 
@@ -200,7 +199,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
         """Manage the options, limited to editing."""
         _LOGGER.debug("async_step_init called with user_input: %s", user_input)
         if self.events is None:
-            self.events = self.config_entry.options.get("events", [])
+            self.events = self.hass.config_entries.async_get_entry(self.config_entry_id).options.get("events", [])
             _LOGGER.debug("Initialized events: %s", self.events)
 
         if not self.events:
@@ -226,13 +225,13 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                     errors={"action": "invalid_action"}
                 )
             _LOGGER.info("Selected action: edit")
-            return await self.async_step_select_event(user_input)
+            return await self.async_step_select_event({})
 
         _LOGGER.info("Showing form for step 'init' with action: edit")
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({
-                vol.Required("action"): vol.In(["edit"])
+                vol.Required("action", default="edit"): vol.In(["edit"])
             })
         )
 
@@ -250,11 +249,11 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
             )
 
         event_options = {}
-        for i, e in enumerate(self.events):
-            if "name" in e and "type" in e:
-                event_options[str(i)] = f"{e['name']} ({e['type']})"
+        for i, event in enumerate(self.events):
+            if "name" in event and "type" in event:
+                event_options[str(i)] = f"{event['name']} ({event['type']})"
             else:
-                _LOGGER.warning("Invalid event at index %s: %s", i, e)
+                _LOGGER.warning("Invalid event at index %s: %s", i, event)
                 continue
 
         if not event_options:
@@ -383,12 +382,12 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                 _LOGGER.info("Updated events list: %s", self.events)
                 try:
                     self.hass.config_entries.async_update_entry(
-                        self.config_entry,
+                        self.hass.config_entries.async_get_entry(self.config_entry_id),
                         title=_generate_entry_title(self.events),
                         options={"events": self.events}
                     )
-                    await self.hass.config_entries.async_reload(self.config_entry.entry_id)
-                    _LOGGER.info("Reloaded config entry %s after editing event", self.config_entry.entry_id)
+                    await self.hass.config_entries.async_reload(self.config_entry_id)
+                    _LOGGER.info("Reloaded config entry %s after editing event", self.config_entry_id)
                     return self.async_create_entry(
                         title=_generate_entry_title(self.events),
                         data={},
