@@ -27,6 +27,7 @@
         }
       },
       "select_event": {
+        "description": "Sélectionnez un événement à modifier.",
         "data": {
           "event": "Événement"
         }
@@ -53,8 +54,8 @@
     },
     "error": {
       "invalid_date_format": "Format de date invalide. Utilisez JJ/MM/AAAA.",
-      "no_events": "Aucun événement configuré. Veuillez d'abord créer un événement.",
-      "event_required": "Veuillez sélectionner un événement.",
+      "no_events": "Aucun événement configuré. Veuillez d'abord créer un événement via l'ajout initial.",
+      "event_required": "Veuillez sélectionner un événement à modifier dans la liste.",
       "invalid_action": "Action invalide. Veuillez sélectionner 'Modifier'.",
       "update_failed": "Échec de la mise à jour de l'événement. Vérifiez les logs pour plus de détails."
     },
