@@ -22,15 +22,14 @@ def _generate_entry_title(events: list) -> str:
     """Generate a title for the config entry based on the list of events."""
     if not events:
         return "Compte à rebours d'événements (vide)"
-    # Define translated event types
     event_type_labels = {
         "birthday": "Anniversaire",
         "anniversary": "Anniversaire de mariage",
         "memorial": "Mémorial",
         "promotion": "Promotion",
-        "special_event": "Événement spécial"
+        "special_event": "Événement spécial",
+        "retirement": "Retraite"
     }
-    # Limit to the first 2 events to avoid overly long titles
     event_names = []
     for event in events[:2]:
         prefix = f"{event.get('first_name', '')} {event['name']}".strip()
@@ -49,6 +48,7 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self):
         """Initialize the config flow."""
         self._event_type = None
+        self._event_index = None
 
     async def async_step_user(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
         """Handle the initial step to select event type."""
@@ -58,13 +58,13 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.info("Selected event type: %s", self._event_type)
             return await self.async_step_event_details()
 
-        # Define translated labels for event types
         event_type_options = {
             "birthday": "Anniversaire",
             "anniversary": "Anniversaire de mariage",
             "memorial": "Mémorial",
             "promotion": "Promotion",
-            "special_event": "Événement spécial"
+            "special_event": "Événement spécial",
+            "retirement": "Retraite"
         }
 
         _LOGGER.info("Showing form for step 'user' to select event type")
@@ -83,29 +83,45 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             _LOGGER.debug("Processing event details: %s", user_input)
-            # Validate date format
-            if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
-                errors["date"] = "invalid_date_format"
-                _LOGGER.warning("Invalid date format: %s", user_input["date"])
-            # Validate death_date if provided (only for memorial)
-            elif self._event_type == "memorial" and user_input.get("death_date"):
-                if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["death_date"]):
-                    errors["death_date"] = "invalid_date_format"
-                    _LOGGER.warning("Invalid death date format: %s", user_input["death_date"])
-                else:
+            if self._event_type == "retirement":
+                if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["start_date"]):
+                    errors["start_date"] = "invalid_date_format"
+                    _LOGGER.warning("Invalid start date format: %s", user_input["start_date"])
+                if user_input.get("birth_date") and not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["birth_date"]):
+                    errors["birth_date"] = "invalid_date_format"
+                    _LOGGER.warning("Invalid birth date format: %s", user_input["birth_date"])
+                if not errors:
                     try:
-                        day, month, year = map(int, user_input["death_date"].split('/'))
-                        date(year, month, day)  # Validate death_date
+                        day, month, year = map(int, user_input["start_date"].split('/'))
+                        date(year, month, day)
+                        if user_input.get("birth_date"):
+                            day, month, year = map(int, user_input["birth_date"].split('/'))
+                            date(year, month, day)
                     except (ValueError, TypeError) as e:
-                        errors["death_date"] = "invalid_date_format"
-                        _LOGGER.error("Death date validation failed: %s", e)
-            if not errors:
-                try:
-                    day, month, year = map(int, user_input["date"].split('/'))
-                    date(year, month, day)  # Validate event date
-                except (ValueError, TypeError) as e:
+                        errors["start_date" if "start_date" in user_input else "birth_date"] = "invalid_date_format"
+                        _LOGGER.error("Date validation failed: %s", e)
+            else:
+                if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
                     errors["date"] = "invalid_date_format"
-                    _LOGGER.error("Date validation failed: %s", e)
+                    _LOGGER.warning("Invalid date format: %s", user_input["date"])
+                elif self._event_type == "memorial" and user_input.get("death_date"):
+                    if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["death_date"]):
+                        errors["death_date"] = "invalid_date_format"
+                        _LOGGER.warning("Invalid death date format: %s", user_input["death_date"])
+                    else:
+                        try:
+                            day, month, year = map(int, user_input["death_date"].split('/'))
+                            date(year, month, day)
+                        except (ValueError, TypeError) as e:
+                            errors["death_date"] = "invalid_date_format"
+                            _LOGGER.error("Death date validation failed: %s", e)
+                if not errors:
+                    try:
+                        day, month, year = map(int, user_input["date"].split('/'))
+                        date(year, month, day)
+                    except (ValueError, TypeError) as e:
+                        errors["date"] = "invalid_date_format"
+                        _LOGGER.error("Date validation failed: %s", e)
 
             if not errors:
                 _LOGGER.info("Creating entry with initial event: %s", user_input)
@@ -113,13 +129,18 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     {
                         "name": user_input["name"],
                         "first_name": user_input.get("first_name", ""),
-                        "date": user_input["date"],
                         "type": self._event_type
                     }
                 ]
-                # Add death_date only for memorial if provided
-                if self._event_type == "memorial" and user_input.get("death_date"):
+                if self._event_type == "retirement":
+                    initial_events[0]["start_date"] = user_input["start_date"]
+                    initial_events[0]["birth_date"] = user_input.get("birth_date", "")
+                    initial_events[0]["is_penible"] = user_input.get("is_penible", False)
+                elif self._event_type == "memorial" and user_input.get("death_date"):
                     initial_events[0]["death_date"] = user_input["death_date"]
+                    initial_events[0]["date"] = user_input["date"]
+                else:
+                    initial_events[0]["date"] = user_input["date"]
                 _LOGGER.debug("Prepared initial_events: %s", initial_events)
                 try:
                     result = self.async_create_entry(
@@ -133,16 +154,24 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     _LOGGER.error("Failed to create entry: %s", e)
                     errors["base"] = "creation_failed"
 
-        # Base schema
         date_label = "Date de naissance" if self._event_type == "memorial" else "Date"
-        schema = {
-            vol.Required("name", description="Nom de l'événement ou de la personne"): str,
-            vol.Optional("first_name", description="Prénom (optionnel)"): str,
-            vol.Required("date", description=f"{date_label} (format: {DATE_FORMAT})"): str,
-        }
-        # Add death_date field only for memorial
-        if self._event_type == "memorial":
-            schema[vol.Optional("death_date", description=f"Date de décès (format: {DATE_FORMAT})")] = str
+        schema = {}
+        if self._event_type == "retirement":
+            schema = {
+                vol.Required("name", description="Nom de l'événement ou de la personne"): str,
+                vol.Optional("first_name", description="Prénom (optionnel)"): str,
+                vol.Required("start_date", description=f"Date de début du travail (format: {DATE_FORMAT})"): str,
+                vol.Optional("birth_date", description=f"Date de naissance (format: {DATE_FORMAT})"): str,
+                vol.Optional("is_penible", description="Travaux pénibles (réduit les années pour la médaille)"): bool
+            }
+        else:
+            schema = {
+                vol.Required("name", description="Nom de l'événement ou de la personne"): str,
+                vol.Optional("first_name", description="Prénom (optionnel)"): str,
+                vol.Required("date", description=f"{date_label} (format: {DATE_FORMAT})"): str,
+            }
+            if self._event_type == "memorial":
+                schema[vol.Optional("death_date", description=f"Date de décès (format: {DATE_FORMAT})")] = str
 
         _LOGGER.info("Showing form for step 'event_details' with event_type: %s", self._event_type)
         return self.async_show_form(
@@ -151,13 +180,6 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
             description_placeholders={"date_format": DATE_FORMAT}
         )
-
-    @staticmethod
-    @callback
-    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:
-        """Get the options flow for this handler."""
-        _LOGGER.debug("Initializing options flow for config_entry: %s", config_entry.entry_id)
-        return DateCountdownOptionsFlow(config_entry)
 
 class DateCountdownOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for Date Countdown."""
@@ -168,6 +190,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
         self.config_entry = config_entry
         self.events = None
         self._event_type = None
+        self._event_index = None
 
     async def async_step_init(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
         """Manage the options."""
@@ -227,7 +250,8 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
             "anniversary": "Anniversaire de mariage",
             "memorial": "Mémorial",
             "promotion": "Promotion",
-            "special_event": "Événement spécial"
+            "special_event": "Événement spécial",
+            "retirement": "Retraite"
         }
 
         _LOGGER.info("Showing form for step 'add_event_type'")
@@ -246,38 +270,62 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
 
         if user_input is not None:
             _LOGGER.debug("Processing add event: %s", user_input)
-            if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
-                errors["date"] = "invalid_date_format"
-                _LOGGER.warning("Invalid date format: %s", user_input["date"])
-            elif self._event_type == "memorial" and user_input.get("death_date"):
-                if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["death_date"]):
-                    errors["death_date"] = "invalid_date_format"
-                    _LOGGER.warning("Invalid death date format: %s", user_input["death_date"])
-                else:
+            if self._event_type == "retirement":
+                if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["start_date"]):
+                    errors["start_date"] = "invalid_date_format"
+                    _LOGGER.warning("Invalid start date format: %s", user_input["start_date"])
+                if user_input.get("birth_date") and not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["birth_date"]):
+                    errors["birth_date"] = "invalid_date_format"
+                    _LOGGER.warning("Invalid birth date format: %s", user_input["birth_date"])
+                if not errors:
                     try:
-                        day, month, year = map(int, user_input["death_date"].split('/'))
+                        day, month, year = map(int, user_input["start_date"].split('/'))
+                        date(year, month, day)
+                        if user_input.get("birth_date"):
+                            day, month, year = map(int, user_input["birth_date"].split('/'))
+                            date(year, month, day)
+                    except (ValueError, TypeError) as e:
+                        errors["start_date" if "start_date" in user_input else "birth_date"] = "invalid_date_format"
+                        _LOGGER.error("Date validation failed: %s", e)
+            else:
+                if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
+                    errors["date"] = "invalid_date_format"
+                    _LOGGER.warning("Invalid date format: %s", user_input["date"])
+                elif self._event_type == "memorial" and user_input.get("death_date"):
+                    if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["death_date"]):
+                        errors["death_date"] = "invalid_date_format"
+                        _LOGGER.warning("Invalid death date format: %s", user_input["death_date"])
+                    else:
+                        try:
+                            day, month, year = map(int, user_input["death_date"].split('/'))
+                            date(year, month, day)
+                        except (ValueError, TypeError) as e:
+                            errors["death_date"] = "invalid_date_format"
+                            _LOGGER.error("Death date validation failed: %s", e)
+                if not errors:
+                    try:
+                        day, month, year = map(int, user_input["date"].split('/'))
                         date(year, month, day)
                     except (ValueError, TypeError) as e:
-                        errors["death_date"] = "invalid_date_format"
-                        _LOGGER.error("Death date validation failed: %s", e)
-            if not errors:
-                try:
-                    day, month, year = map(int, user_input["date"].split('/'))
-                    date(year, month, day)
-                except (ValueError, TypeError) as e:
-                    errors["date"] = "invalid_date_format"
-                    _LOGGER.error("Date validation failed: %s", e)
+                        errors["date"] = "invalid_date_format"
+                        _LOGGER.error("Date validation failed: %s", e)
 
             if not errors:
                 _LOGGER.info("Adding event: %s", user_input)
                 event_data = {
                     "name": user_input["name"],
                     "first_name": user_input.get("first_name", ""),
-                    "date": user_input["date"],
                     "type": self._event_type
                 }
-                if self._event_type == "memorial" and user_input.get("death_date"):
+                if self._event_type == "retirement":
+                    event_data["start_date"] = user_input["start_date"]
+                    event_data["birth_date"] = user_input.get("birth_date", "")
+                    event_data["is_penible"] = user_input.get("is_penible", False)
+                elif self._event_type == "memorial" and user_input.get("death_date"):
                     event_data["death_date"] = user_input["death_date"]
+                    event_data["date"] = user_input["date"]
+                else:
+                    event_data["date"] = user_input["date"]
                 self.events.append(event_data)
                 _LOGGER.info("Updated events list: %s", self.events)
                 self.hass.config_entries.async_update_entry(
@@ -294,13 +342,23 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                 )
 
         date_label = "Date de naissance" if self._event_type == "memorial" else "Date"
-        schema = {
-            vol.Required("name", description="Nom de l'événement ou de la personne"): str,
-            vol.Optional("first_name", description="Prénom (optionnel)"): str,
-            vol.Required("date", description=f"{date_label} (format: {DATE_FORMAT})"): str,
-        }
-        if self._event_type == "memorial":
-            schema[vol.Optional("death_date", description=f"Date de décès (format: {DATE_FORMAT})")] = str
+        schema = {}
+        if self._event_type == "retirement":
+            schema = {
+                vol.Required("name", description="Nom de l'événement ou de la personne"): str,
+                vol.Optional("first_name", description="Prénom (optionnel)"): str,
+                vol.Required("start_date", description=f"Date de début du travail (format: {DATE_FORMAT})"): str,
+                vol.Optional("birth_date", description=f"Date de naissance (format: {DATE_FORMAT})"): str,
+                vol.Optional("is_penible", description="Travaux pénibles (réduit les années pour la médaille)"): bool
+            }
+        else:
+            schema = {
+                vol.Required("name", description="Nom de l'événement ou de la personne"): str,
+                vol.Optional("first_name", description="Prénom (optionnel)"): str,
+                vol.Required("date", description=f"{date_label} (format: {DATE_FORMAT})"): str,
+            }
+            if self._event_type == "memorial":
+                schema[vol.Optional("death_date", description=f"Date de décès (format: {DATE_FORMAT})")] = str
 
         _LOGGER.info("Showing form for step 'add_event' with event_type: %s", self._event_type)
         return self.async_show_form(
@@ -335,14 +393,14 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                     errors={"event": "event_required"}
                 )
 
-            event_index = int(user_input["event"])
-            _LOGGER.info("Selected event index: %s for action: %s", event_index, user_input["action"])
+            self._event_index = int(user_input["event"])
+            _LOGGER.info("Selected event index: %s for action: %s", self._event_index, user_input["action"])
             if user_input["action"] == "edit":
-                self._event_type = self.events[event_index]["type"]
-                return await self.async_step_edit_event_type({"event_index": event_index})
+                self._event_type = self.events[self._event_index]["type"]
+                return await self.async_step_edit_event_type({"event_index": self._event_index})
             elif user_input["action"] == "delete":
-                self.events.pop(event_index)
-                _LOGGER.info("Deleted event at index: %s", event_index)
+                self.events.pop(self._event_index)
+                _LOGGER.info("Deleted event at index: %s", self._event_index)
                 _LOGGER.info("Updated events list: %s", self.events)
                 self.hass.config_entries.async_update_entry(
                     self.config_entry,
@@ -369,20 +427,21 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
     async def async_step_edit_event_type(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
         """Handle selecting the event type for editing an event."""
         _LOGGER.debug("async_step_edit_event_type called with user_input: %s", user_input)
-        event_index = user_input.get("event_index", 0)
+        self._event_index = user_input.get("event_index", 0)
         if user_input is not None and "type" in user_input:
             self._event_type = user_input["type"]
             _LOGGER.info("Selected event type for edit: %s", self._event_type)
-            user_input["event_index"] = event_index
+            user_input["event_index"] = self._event_index
             return await self.async_step_edit_event(user_input)
 
-        event = self.events[event_index]
+        event = self.events[self._event_index]
         event_type_options = {
             "birthday": "Anniversaire",
             "anniversary": "Anniversaire de mariage",
             "memorial": "Mémorial",
             "promotion": "Promotion",
-            "special_event": "Événement spécial"
+            "special_event": "Événement spécial",
+            "retirement": "Retraite"
         }
 
         return self.async_show_form(
@@ -397,43 +456,67 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
         """Handle editing an event."""
         _LOGGER.debug("async_step_edit_event called with user_input: %s", user_input)
         errors = {}
-        event_index = user_input.get("event_index", 0)
+        self._event_index = user_input.get("event_index", 0)
 
         if user_input is not None:
             _LOGGER.debug("Processing edit event: %s", user_input)
-            if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
-                errors["date"] = "invalid_date_format"
-                _LOGGER.warning("Invalid date format for edit: %s", user_input["date"])
-            elif self._event_type == "memorial" and user_input.get("death_date"):
-                if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["death_date"]):
-                    errors["death_date"] = "invalid_date_format"
-                    _LOGGER.warning("Invalid death date format for edit: %s", user_input["death_date"])
-                else:
+            if self._event_type == "retirement":
+                if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["start_date"]):
+                    errors["start_date"] = "invalid_date_format"
+                    _LOGGER.warning("Invalid start date format for edit: %s", user_input["start_date"])
+                if user_input.get("birth_date") and not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["birth_date"]):
+                    errors["birth_date"] = "invalid_date_format"
+                    _LOGGER.warning("Invalid birth date format for edit: %s", user_input["birth_date"])
+                if not errors:
                     try:
-                        day, month, year = map(int, user_input["death_date"].split('/'))
+                        day, month, year = map(int, user_input["start_date"].split('/'))
+                        date(year, month, day)
+                        if user_input.get("birth_date"):
+                            day, month, year = map(int, user_input["birth_date"].split('/'))
+                            date(year, month, day)
+                    except (ValueError, TypeError) as e:
+                        errors["start_date" if "start_date" in user_input else "birth_date"] = "invalid_date_format"
+                        _LOGGER.error("Date validation failed for edit: %s", e)
+            else:
+                if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["date"]):
+                    errors["date"] = "invalid_date_format"
+                    _LOGGER.warning("Invalid date format for edit: %s", user_input["date"])
+                elif self._event_type == "memorial" and user_input.get("death_date"):
+                    if not re.match(r"^\d{2}/\d{2}/\d{4}$", user_input["death_date"]):
+                        errors["death_date"] = "invalid_date_format"
+                        _LOGGER.warning("Invalid death date format for edit: %s", user_input["death_date"])
+                    else:
+                        try:
+                            day, month, year = map(int, user_input["death_date"].split('/'))
+                            date(year, month, day)
+                        except (ValueError, TypeError) as e:
+                            errors["death_date"] = "invalid_date_format"
+                            _LOGGER.error("Death date validation failed for edit: %s", e)
+                if not errors:
+                    try:
+                        day, month, year = map(int, user_input["date"].split('/'))
                         date(year, month, day)
                     except (ValueError, TypeError) as e:
-                        errors["death_date"] = "invalid_date_format"
-                        _LOGGER.error("Death date validation failed for edit: %s", e)
-            if not errors:
-                try:
-                    day, month, year = map(int, user_input["date"].split('/'))
-                    date(year, month, day)
-                except (ValueError, TypeError) as e:
-                    errors["date"] = "invalid_date_format"
-                    _LOGGER.error("Date validation failed for edit: %s", e)
+                        errors["date"] = "invalid_date_format"
+                        _LOGGER.error("Date validation failed for edit: %s", e)
 
             if not errors:
-                _LOGGER.info("Updating event at index %s: %s", event_index, user_input)
+                _LOGGER.info("Updating event at index %s: %s", self._event_index, user_input)
                 event_data = {
                     "name": user_input["name"],
                     "first_name": user_input.get("first_name", ""),
-                    "date": user_input["date"],
                     "type": self._event_type
                 }
-                if self._event_type == "memorial" and user_input.get("death_date"):
+                if self._event_type == "retirement":
+                    event_data["start_date"] = user_input["start_date"]
+                    event_data["birth_date"] = user_input.get("birth_date", "")
+                    event_data["is_penible"] = user_input.get("is_penible", False)
+                elif self._event_type == "memorial" and user_input.get("death_date"):
                     event_data["death_date"] = user_input["death_date"]
-                self.events[event_index] = event_data
+                    event_data["date"] = user_input["date"]
+                else:
+                    event_data["date"] = user_input["date"]
+                self.events[self._event_index] = event_data
                 _LOGGER.info("Updated events list: %s", self.events)
                 self.hass.config_entries.async_update_entry(
                     self.config_entry,
@@ -448,15 +531,25 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                     options={"events": self.events}
                 )
 
-        event = self.events[event_index]
+        event = self.events[self._event_index]
         date_label = "Date de naissance" if self._event_type == "memorial" else "Date"
-        schema = {
-            vol.Required("name", description="Nom de l'événement ou de la personne", default=event["name"]): str,
-            vol.Optional("first_name", description="Prénom (optionnel)", default=event.get("first_name", "")): str,
-            vol.Required("date", description=f"{date_label} (format: {DATE_FORMAT})", default=event["date"]): str,
-        }
-        if self._event_type == "memorial":
-            schema[vol.Optional("death_date", description=f"Date de décès (format: {DATE_FORMAT})", default=event.get("death_date", ""))] = str
+        schema = {}
+        if self._event_type == "retirement":
+            schema = {
+                vol.Required("name", description="Nom de l'événement ou de la personne", default=event["name"]): str,
+                vol.Optional("first_name", description="Prénom (optionnel)", default=event.get("first_name", "")): str,
+                vol.Required("start_date", description=f"Date de début du travail (format: {DATE_FORMAT})", default=event["start_date"]): str,
+                vol.Optional("birth_date", description=f"Date de naissance (format: {DATE_FORMAT})", default=event.get("birth_date", "")): str,
+                vol.Optional("is_penible", description="Travaux pénibles (réduit les années pour la médaille)", default=event.get("is_penible", False)): bool
+            }
+        else:
+            schema = {
+                vol.Required("name", description="Nom de l'événement ou de la personne", default=event["name"]): str,
+                vol.Optional("first_name", description="Prénom (optionnel)", default=event.get("first_name", "")): str,
+                vol.Required("date", description=f"{date_label} (format: {DATE_FORMAT})", default=event["date"]): str,
+            }
+            if self._event_type == "memorial":
+                schema[vol.Optional("death_date", description=f"Date de décès (format: {DATE_FORMAT})", default=event.get("death_date", ""))] = str
 
         return self.async_show_form(
             step_id="edit_event",
