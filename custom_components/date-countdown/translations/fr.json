@@ -16,7 +16,8 @@
           "type": "Type d'événement",
           "death_date": "Date de décès (optionnel, pour mémorial)",
           "start_date": "Date de début du travail (pour retraite)",
-          "is_penible": "Travaux pénibles (réduit les années pour la médaille)"
+          "is_penible": "Travaux pénibles (réduit les années pour la médaille)",
+          "is_long_career": "Carrière longue (début avant 18 ans)"
         }
       },
       "init": {
@@ -40,7 +41,8 @@
           "type": "Type d'événement",
           "death_date": "Date de décès (optionnel, pour mémorial)",
           "start_date": "Date de début du travail (pour retraite)",
-          "is_penible": "Travaux pénibles (réduit les années pour la médaille)"
+          "is_penible": "Travaux pénibles (réduit les années pour la médaille)",
+          "is_long_career": "Carrière longue (début avant 18 ans)"
         }
       },
       "select_event": {
@@ -64,7 +66,8 @@
           "type": "Type d'événement",
           "death_date": "Date de décès (optionnel, pour mémorial)",
           "start_date": "Date de début du travail (pour retraite)",
-          "is_penible": "Travaux pénibles (réduit les années pour la médaille)"
+          "is_penible": "Travaux pénibles (réduit les années pour la médaille)",
+          "is_long_career": "Carrière longue (début avant 18 ans)"
         }
       }
     },
