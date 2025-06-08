@@ -101,6 +101,7 @@ class DateCountdownSensor(SensorEntity):
         self._years_since_death = None
         self._age_category = None
         self._years_remaining = None
+        self._years_retired = None
         self._work_medal = None
         unique_id_base = f"{event_type}_{name.lower().replace(' ', '_')}"
         unique_id_date = (start_date or event_date or "").replace('/', '')
@@ -155,6 +156,8 @@ class DateCountdownSensor(SensorEntity):
                 attributes["years_worked"] = self._years
             if self._years_remaining is not None:
                 attributes["years_remaining"] = self._years_remaining
+            if self._years_retired is not None:
+                attributes["years_retired"] = self._years_retired
             if self._work_medal:
                 attributes["work_medal"] = self._work_medal
         else:
@@ -188,6 +191,7 @@ class DateCountdownSensor(SensorEntity):
                 self._state = None
                 self._years = None
                 self._years_remaining = None
+                self._years_retired = None
                 self._work_medal = None
                 return
 
@@ -212,14 +216,21 @@ class DateCountdownSensor(SensorEntity):
             retirement_year = start_date.year + years_to_retirement
             retirement_date = date(retirement_year, start_date.month, start_date.day)
 
-            # Ajuster si la date de retraite est passée
-            if retirement_date < today:
-                retirement_date = date(today.year + 1, start_date.month, start_date.day)
-            self._state = (retirement_date - today).days
-            self._years_remaining = retirement_date.year - today.year
-            if (today.month, today.day) > (retirement_date.month, retirement_date.day):
-                self._years_remaining -= 1
-            _LOGGER.debug("Sensor %s: State=%s days, Years remaining=%s", self._attr_unique_id, self._state, self._years_remaining)
+            # Gérer retraite passée ou future
+            if retirement_date <= today:
+                self._state = 0
+                self._years_remaining = 0
+                self._years_retired = today.year - retirement_date.year
+                if (today.month, today.day) < (retirement_date.month, retirement_date.day):
+                    self._years_retired -= 1
+                _LOGGER.debug("Sensor %s: Retirement passed, years retired=%s", self._attr_unique_id, self._years_retired)
+            else:
+                self._state = (retirement_date - today).days
+                self._years_remaining = retirement_date.year - today.year
+                if (today.month, today.day) > (retirement_date.month, retirement_date.day):
+                    self._years_remaining -= 1
+                self._years_retired = None
+                _LOGGER.debug("Sensor %s: State=%s days, Years remaining=%s", self._attr_unique_id, self._state, self._years_remaining)
 
             # Déterminer la médaille du travail
             medal_levels = WORK_MEDAL_PENIBLE_LEVELS if self._is_penible else WORK_MEDAL_LEVELS
