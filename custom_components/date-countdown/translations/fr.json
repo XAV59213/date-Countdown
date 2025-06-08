@@ -14,7 +14,10 @@
           "first_name": "Prénom (optionnel)",
           "date": "Date de naissance (pour mémorial) ou Date (autres types)",
           "type": "Type d'événement",
-          "death_date": "Date de décès (optionnel, pour mémorial)"
+          "death_date": "Date de décès (optionnel, pour mémorial)",
+          "start_date": "Date de début du travail (pour retraite)",
+          "birth_date": "Date de naissance (optionnel, pour retraite)",
+          "is_penible": "Travaux pénibles (réduit les années pour la médaille)"
         }
       },
       "init": {
@@ -36,7 +39,10 @@
           "first_name": "Prénom (optionnel)",
           "date": "Date de naissance (pour mémorial) ou Date (autres types)",
           "type": "Type d'événement",
-          "death_date": "Date de décès (optionnel, pour mémorial)"
+          "death_date": "Date de décès (optionnel, pour mémorial)",
+          "start_date": "Date de début du travail (pour retraite)",
+          "birth_date": "Date de naissance (optionnel, pour retraite)",
+          "is_penible": "Travaux pénibles (réduit les années pour la médaille)"
         }
       },
       "select_event": {
@@ -58,7 +64,10 @@
           "first_name": "Prénom (optionnel)",
           "date": "Date de naissance (pour mémorial) ou Date (autres types)",
           "type": "Type d'événement",
-          "death_date": "Date de décès (optionnel, pour mémorial)"
+          "death_date": "Date de décès (optionnel, pour mémorial)",
+          "start_date": "Date de début du travail (pour retraite)",
+          "birth_date": "Date de naissance (optionnel, pour retraite)",
+          "is_penible": "Travaux pénibles (réduit les années pour la médaille)"
         }
       }
     },
