@@ -203,6 +203,16 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
             self.events = self.config_entry.options.get("events", [])
             _LOGGER.debug("Initialized events: %s", self.events)
 
+        if not self.events:
+            _LOGGER.warning("No events available for editing")
+            return self.async_show_form(
+                step_id="init",
+                data_schema=vol.Schema({
+                    vol.Required("action"): vol.In(["edit"])
+                }),
+                errors={"base": "no_events"}
+            )
+
         if user_input is not None:
             action = user_input.get("action")
             _LOGGER.debug("Action selected: %s", action)
@@ -216,15 +226,6 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                     errors={"action": "invalid_action"}
                 )
             _LOGGER.info("Selected action: edit")
-            if not self.events:
-                _LOGGER.warning("No events available for editing")
-                return self.async_show_form(
-                    step_id="init",
-                    data_schema=vol.Schema({
-                        vol.Required("action"): vol.In(["edit"])
-                    }),
-                    errors={"base": "no_events"}
-                )
             return await self.async_step_select_event(user_input)
 
         _LOGGER.info("Showing form for step 'init' with action: edit")
@@ -248,13 +249,31 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                 errors={"base": "no_events"}
             )
 
+        event_options = {}
+        for i, e in enumerate(self.events):
+            if "name" in e and "type" in e:
+                event_options[str(i)] = f"{e['name']} ({e['type']})"
+            else:
+                _LOGGER.warning("Invalid event at index %s: %s", i, e)
+                continue
+
+        if not event_options:
+            _LOGGER.error("No valid events found for selection")
+            return self.async_show_form(
+                step_id="init",
+                data_schema=vol.Schema({
+                    vol.Required("action"): vol.In(["edit"])
+                }),
+                errors={"base": "no_events"}
+            )
+
         if user_input is not None:
-            if "event" not in user_input:
-                _LOGGER.warning("No event selected in user_input")
+            if "event" not in user_input or user_input["event"] not in event_options:
+                _LOGGER.warning("No valid event selected in user_input: %s", user_input)
                 return self.async_show_form(
                     step_id="select_event",
                     data_schema=vol.Schema({
-                        vol.Required("event"): vol.In({str(i): f"{e['name']} ({e['type']})" for i, e in enumerate(self.events)}),
+                        vol.Required("event"): vol.In(event_options),
                     }),
                     errors={"event": "event_required"}
                 )
@@ -264,7 +283,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
             self._event_type = self.events[event_index]["type"]
             return await self.async_step_edit_event_type({"event_index": event_index})
 
-        event_options = {str(i): f"{e['name']} ({e['type']})" for i, e in enumerate(self.events)}
+        _LOGGER.info("Showing form for step 'select_event' with %d options", len(event_options))
         return self.async_show_form(
             step_id="select_event",
             data_schema=vol.Schema({
