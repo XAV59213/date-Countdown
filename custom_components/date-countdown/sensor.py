@@ -41,10 +41,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                 day, month, year = map(int, event[key].split('/'))
                 date(year, month, day)
             if event.get("death_date"):
-                day, month, year = map(int, event["death_date"].split('/'))
-                date(year, month, day)
+                try:
+                    day, month, year = map(int, event["death_date"].split('/'))
+                    date(year, month, day)
+                except (ValueError, TypeError) as e:
+                    _LOGGER.error("Invalid death_date format for event %s: %s. Skipping event.", event, e)
+                    continue
         except (ValueError, TypeError) as e:
-            _LOGGER.error("Invalid date format for event %s: %s. Expected DD/MM/YYYY.", event, e)
+            _LOGGER.error("Invalid date format for event %s: %s. Expected DD/MM/YYYY. Skipping event.", event, e)
             continue
 
         event_sensor = DateCountdownSensor(
@@ -214,7 +218,15 @@ class DateCountdownSensor(SensorEntity):
                 years_to_retirement = retirement_age - age_at_start  # 45 ans
 
             retirement_year = start_date.year + years_to_retirement
-            retirement_date = date(retirement_year, start_date.month, start_date.day)
+            try:
+                retirement_date = date(retirement_year, start_date.month, start_date.day)
+            except ValueError as e:
+                _LOGGER.error("Invalid retirement date for sensor %s: %s", self._attr_unique_id, e)
+                self._state = None
+                self._years_remaining = None
+                self._years_retired = None
+                self._work_medal = None
+                return
 
             # Gérer retraite passée ou future
             if retirement_date <= today:
