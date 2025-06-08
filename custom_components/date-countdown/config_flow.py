@@ -129,6 +129,7 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if self._event_type == "retirement":
                     initial_events[0]["start_date"] = user_input["start_date"]
                     initial_events[0]["is_penible"] = user_input.get("is_penible", False)
+                    initial_events[0]["is_long_career"] = user_input.get("is_long_career", False)
                 elif self._event_type == "memorial" and user_input.get("death_date"):
                     initial_events[0]["death_date"] = user_input["death_date"]
                     initial_events[0]["date"] = user_input["date"]
@@ -153,7 +154,8 @@ class DateCountdownConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required("name", description="Nom de l'événement ou de la personne"): str,
                 vol.Optional("first_name", description="Prénom (optionnel)"): str,
                 vol.Required("start_date", description=f"Date de début du travail (format: {DATE_FORMAT})"): str,
-                vol.Optional("is_penible", description="Travaux pénibles (réduit les années pour la médaille)"): bool
+                vol.Optional("is_penible", description="Travaux pénibles (réduit les années pour la médaille)"): bool,
+                vol.Optional("is_long_career", description="Carrière longue (début avant 18 ans)"): bool
             }
         else:
             date_label = "Date de naissance" if self._event_type == "memorial" else "Date"
@@ -312,6 +314,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                 if self._event_type == "retirement":
                     event_data["start_date"] = user_input["start_date"]
                     event_data["is_penible"] = user_input.get("is_penible", False)
+                    event_data["is_long_career"] = user_input.get("is_long_career", False)
                 elif self._event_type == "memorial" and user_input.get("death_date"):
                     event_data["death_date"] = user_input["death_date"]
                     event_data["date"] = user_input["date"]
@@ -337,7 +340,8 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                 vol.Required("name", description="Nom de l'événement ou de la personne"): str,
                 vol.Optional("first_name", description="Prénom (optionnel)"): str,
                 vol.Required("start_date", description=f"Date de début du travail (format: {DATE_FORMAT})"): str,
-                vol.Optional("is_penible", description="Travaux pénibles (réduit les années pour la médaille)"): bool
+                vol.Optional("is_penible", description="Travaux pénibles (réduit les années pour la médaille)"): bool,
+                vol.Optional("is_long_career", description="Carrière longue (début avant 18 ans)"): bool
             }
         else:
             date_label = "Date de naissance" if self._event_type == "memorial" else "Date"
@@ -493,6 +497,7 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                 if self._event_type == "retirement":
                     event_data["start_date"] = user_input["start_date"]
                     event_data["is_penible"] = user_input.get("is_penible", False)
+                    event_data["is_long_career"] = user_input.get("is_long_career", False)
                 elif self._event_type == "memorial" and user_input.get("death_date"):
                     event_data["death_date"] = user_input["death_date"]
                     event_data["date"] = user_input["date"]
@@ -519,7 +524,8 @@ class DateCountdownOptionsFlow(config_entries.OptionsFlow):
                 vol.Required("name", description="Nom de l'événement ou de la personne", default=event["name"]): str,
                 vol.Optional("first_name", description="Prénom (optionnel)", default=event.get("first_name", "")): str,
                 vol.Required("start_date", description=f"Date de début du travail (format: {DATE_FORMAT})", default=event["start_date"]): str,
-                vol.Optional("is_penible", description="Travaux pénibles (réduit les années pour la médaille)", default=event.get("is_penible", False)): bool
+                vol.Optional("is_penible", description="Travaux pénibles (réduit les années pour la médaille)", default=event.get("is_penible", False)): bool,
+                vol.Optional("is_long_career", description="Carrière longue (début avant 18 ans)", default=event.get("is_long_career", False)): bool
             }
         else:
             date_label = "Date de naissance" if self._event_type == "memorial" else "Date"
