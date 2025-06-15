@@ -1,8 +1,6 @@
-# Fichier : calendar.py
-
 """Calendar platform for Date Countdown."""
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, time, timezone
 from typing import Optional, Callable
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
@@ -80,8 +78,9 @@ class DateCountdownCalendar(CalendarEntity):
         if next_date < today:
             next_date = date(today.year + 1, self._event_date.month, self._event_date.day)
 
-        start = datetime.combine(next_date, datetime.min.time())
-        end = start + timedelta(days=1)
+        tzinfo = dt_util.DEFAULT_TIME_ZONE
+        start = datetime.combine(next_date, time(0, 0), tzinfo=tzinfo)
+        end = datetime.combine(next_date, time(23, 59), tzinfo=tzinfo)
         summary = f"{self._attr_name}"
 
         return CalendarEvent(start=start, end=end, summary=summary)
@@ -94,3 +93,4 @@ class DateCountdownCalendar(CalendarEntity):
 
     async def async_update(self) -> None:
         self._next_event = self.event
+
