@@ -5,7 +5,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "date_countdown"
-PLATFORMS = ["sensor"]
+PLATFORMS = ["sensor", "calendar"]
 DATE_FORMAT = "DD/MM/YYYY"
 EVENT_TYPES = ["birthday", "anniversary", "memorial", "promotion", "special_event", "retirement"]
 
